@@ -9,7 +9,11 @@ export function migrateWorkspace(ws){
   (ws?.projects || []).forEach(p => {
     if (p.portraitScale == null) p.portraitScale = 1;
     if (p.cover == null) p.cover = '';
-    (p.entries || []).forEach(e => { if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type]; });
+    if (p.spotify == null) p.spotify = [];
+    (p.entries || []).forEach(e => {
+      if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
+      if (e.data){ templateFor(e.type).sections.forEach(s => { if (!(s.key in e.data)) e.data[s.key] = emptyValue(s); }); }
+    });
   });
   return ws;
 }
@@ -30,14 +34,14 @@ export function createEntry(type, name){
   const tpl = templateFor(type);
   const data = {};
   tpl.sections.forEach(sec => { data[sec.key] = emptyValue(sec); });
-  return { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', data };
+  return { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', group: '', data };
 }
 
 export function createProject(name, genre){
   return {
     id: uid(), name: name || 'New project', genre: genre || '',
     palette: 'slate', headFont: 'playfair-display', bodyFont: 'eb-garamond',
-    headScale: 1, bodyScale: 1, portraitScale: 1, cover: '', entries: [],
+    headScale: 1, bodyScale: 1, portraitScale: 1, cover: '', spotify: [], entries: [],
   };
 }
 
@@ -59,6 +63,42 @@ export function coverOf(entry){
     if (Array.isArray(v) && v.length && typeof v[0] === 'string' && /^data:|^https?:|^\.\.?\//.test(v[0])) return v[0];
   }
   return '';
+}
+
+// Deep-walk any field value, collecting the "role" of every link to `id` — structured
+// targetId links on objects AND inline [[id|label]] tokens inside rich-text strings.
+function collectTargets(val, id, hits){
+  if (typeof val === 'string'){
+    const re = /\[\[([\w-]+)\|[^\]]*\]\]/g; let m;
+    while ((m = re.exec(val))) if (m[1] === id) hits.push('mention');
+    return;
+  }
+  if (Array.isArray(val)){ for (const v of val) collectTargets(v, id, hits); return; }
+  if (val && typeof val === 'object'){
+    if (val.targetId === id) hits.push(val.role || val.status || val.kind || '');
+    for (const k in val){ if (k !== 'targetId') collectTargets(val[k], id, hits); }
+  }
+}
+
+// Reverse of the targetId links: every entry that points AT `entry`, with the section
+// + role it linked under. Powers the read-only "Linked from" backlinks block.
+export function backlinksFor(entry, project){
+  if (!entry || !project) return [];
+  const out = [];
+  for (const src of (project.entries || [])){
+    if (src.id === entry.id || !src.data) continue;
+    const labelOf = {}; templateFor(src.type).sections.forEach(s => { labelOf[s.key] = s.label; });
+    const seen = new Set();
+    for (const key in src.data){
+      const hits = []; collectTargets(src.data[key], entry.id, hits);
+      for (const role of hits){
+        const sig = key + '|' + role;
+        if (seen.has(sig)) continue; seen.add(sig);
+        out.push({ id: src.id, title: src.title || 'Untitled', type: src.type, section: labelOf[key] || key, role });
+      }
+    }
+  }
+  return out;
 }
 
 export function entriesByType(project){

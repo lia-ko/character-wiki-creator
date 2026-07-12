@@ -18,7 +18,12 @@ export const PALETTES = [
   {id:"steel",    name:"Steel",     bg:"#14171b",panel:"#1b1f26",panel2:"#232833",ink:"#dde3ea",muted:"#8c96a4",faint:"#5f6874",accent:"#6b8cae",accentSoft:"#a9c2dc",rule:"#2a313b",line:"rgba(221,227,234,.07)"},
   {id:"pine",     name:"Pine",      bg:"#0c130f",panel:"#121b16",panel2:"#17241c",ink:"#d7e4da",muted:"#86a591",faint:"#566b5d",accent:"#4a8f66",accentSoft:"#92cba6",rule:"#203029",line:"rgba(215,228,218,.07)"},
   {id:"ivory",    name:"Ivory (light)",bg:"#f2ece0",panel:"#f8f3ea",panel2:"#e9e0cf",ink:"#241f18",muted:"#6b6153",faint:"#938876",accent:"#9a4a34",accentSoft:"#a5654f",rule:"#ddd2bf",line:"rgba(36,31,24,.10)"},
-  {id:"fog",      name:"Fog (light)",bg:"#eceef1",panel:"#f6f8fa",panel2:"#e2e6ec",ink:"#1a1f26",muted:"#5b6673",faint:"#8994a2",accent:"#4a6b96",accentSoft:"#6f8bb0",rule:"#d3d9e1",line:"rgba(26,31,38,.09)"}
+  {id:"fog",      name:"Fog (light)",bg:"#eceef1",panel:"#f6f8fa",panel2:"#e2e6ec",ink:"#1a1f26",muted:"#5b6673",faint:"#8994a2",accent:"#4a6b96",accentSoft:"#6f8bb0",rule:"#d3d9e1",line:"rgba(26,31,38,.09)"},
+  {id:"blush",    name:"Blush (light)",bg:"#fbe7ef",panel:"#fdf1f6",panel2:"#f6d9e4",ink:"#3c1523",muted:"#8f5a6d",faint:"#bd8ba0",accent:"#d6336c",accentSoft:"#b83f6b",rule:"#eebfd1",line:"rgba(60,21,35,.10)"},
+  {id:"coral",    name:"Coral (light)",bg:"#fdeae2",panel:"#fef4ef",panel2:"#f9d8ca",ink:"#3d1c12",muted:"#8c5a43",faint:"#c08d77",accent:"#e8552e",accentSoft:"#c65a3f",rule:"#f3c9b6",line:"rgba(61,28,18,.10)"},
+  {id:"lavender", name:"Lavender (light)",bg:"#efe8fb",panel:"#f6f1fd",panel2:"#e2d7f6",ink:"#241a3a",muted:"#6b5c8f",faint:"#9c8cc0",accent:"#7c3aed",accentSoft:"#8a5fd0",rule:"#d6c9ee",line:"rgba(36,26,58,.10)"},
+  {id:"mint",     name:"Mint (light)",bg:"#e4f4ec",panel:"#eff9f3",panel2:"#d5eede",ink:"#123227",muted:"#4f7c69",faint:"#88ad9c",accent:"#0f9d6b",accentSoft:"#3f9d6d",rule:"#c2e4d3",line:"rgba(18,50,39,.10)"},
+  {id:"fuchsia",  name:"Fuchsia",  bg:"#1a0a13",panel:"#250f1c",panel2:"#321426",ink:"#f7dde9",muted:"#c88aa7",faint:"#8c5c75",accent:"#ff2d78",accentSoft:"#ff8ab5",rule:"#3e1a2e",line:"rgba(247,221,233,.08)"}
 ];
 
 export function palById(id){ return PALETTES.find(p => p.id === id) || PALETTES[1]; }
@@ -27,6 +32,7 @@ export function paletteVars(p){ return ":root{--bg:"+p.bg+";--panel:"+p.panel+";
 export const FACES = [
   {id:"abril-fatface",name:"Abril Fatface",family:"Abril Fatface",cat:"serif",dir:"Abril_Fatface",file:"AbrilFatface-Regular.ttf",ital:"",varr:false},
   {id:"alegreya",name:"Alegreya",family:"Alegreya",cat:"serif",dir:"Alegreya",file:"Alegreya-VariableFont_wght.ttf",ital:"Alegreya-Italic-VariableFont_wght.ttf",varr:true},
+  {id:"black-ops-one",name:"Black Ops One",family:"Black Ops One",cat:"sans",dir:"Black_Ops_One",file:"BlackOpsOne-Regular.ttf",ital:"",varr:false},
   {id:"bodoni-moda",name:"Bodoni Moda",family:"Bodoni Moda",cat:"serif",dir:"Bodoni_Moda",file:"BodoniModa-VariableFont_opsz,wght.ttf",ital:"BodoniModa-Italic-VariableFont_opsz,wght.ttf",varr:true},
   {id:"cardo",name:"Cardo",family:"Cardo",cat:"serif",dir:"Cardo",file:"Cardo-Regular.ttf",ital:"Cardo-Italic.ttf",varr:false},
   {id:"cinzel",name:"Cinzel",family:"Cinzel",cat:"serif",dir:"Cinzel",file:"Cinzel-VariableFont_wght.ttf",ital:"",varr:true},
@@ -46,8 +52,11 @@ export const FACES = [
   {id:"mulish",name:"Mulish",family:"Mulish",cat:"sans",dir:"Mulish",file:"Mulish-VariableFont_wght.ttf",ital:"Mulish-Italic-VariableFont_wght.ttf",varr:true},
   {id:"newsreader",name:"Newsreader",family:"Newsreader",cat:"serif",dir:"Newsreader",file:"Newsreader-VariableFont_opsz,wght.ttf",ital:"Newsreader-Italic-VariableFont_opsz,wght.ttf",varr:true},
   {id:"old-standard-tt",name:"Old Standard TT",family:"Old Standard TT",cat:"serif",dir:"Old_Standard_TT",file:"OldStandardTT-Regular.ttf",ital:"OldStandardTT-Italic.ttf",varr:false},
+  {id:"oxanium",name:"Oxanium",family:"Oxanium",cat:"sans",dir:"Oxanium",file:"Oxanium-VariableFont_wght.ttf",ital:"",varr:true},
+  {id:"permanent-marker",name:"Permanent Marker",family:"Permanent Marker",cat:"sans",dir:"Permanent_Marker",file:"PermanentMarker-Regular.ttf",ital:"",varr:false},
   {id:"playfair-display",name:"Playfair Display",family:"Playfair Display",cat:"serif",dir:"Playfair_Display",file:"PlayfairDisplay-VariableFont_wght.ttf",ital:"PlayfairDisplay-Italic-VariableFont_wght.ttf",varr:true},
   {id:"public-sans",name:"Public Sans",family:"Public Sans",cat:"sans",dir:"Public_Sans",file:"PublicSans-VariableFont_wght.ttf",ital:"PublicSans-Italic-VariableFont_wght.ttf",varr:true},
+  {id:"six-caps",name:"Six Caps",family:"Six Caps",cat:"serif",dir:"Six_Caps",file:"SixCaps-Regular.ttf",ital:"",varr:false},
   {id:"sora",name:"Sora",family:"Sora",cat:"sans",dir:"Sora",file:"Sora-VariableFont_wght.ttf",ital:"",varr:true},
   {id:"space-grotesk",name:"Space Grotesk",family:"Space Grotesk",cat:"sans",dir:"Space_Grotesk",file:"SpaceGrotesk-VariableFont_wght.ttf",ital:"",varr:true},
   {id:"special-elite",name:"Special Elite",family:"Special Elite",cat:"serif",dir:"Special_Elite",file:"SpecialElite-Regular.ttf",ital:"",varr:false},

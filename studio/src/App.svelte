@@ -15,6 +15,7 @@
   import ProjectView from './components/ProjectView.svelte';
   import EntryEditor from './components/EntryEditor.svelte';
   import MapLab from './components/MapLab.svelte';
+  import CommandPalette from './components/CommandPalette.svelte';
 
   // Load every font face once (editor preview needs them all available).
   const faceCSS = fontFaceCSS('/fonts/');
@@ -32,6 +33,7 @@
 </svelte:head>
 
 <TopBar />
+<CommandPalette />
 
 <div class="stage">
   {#if app.view === 'projects'}

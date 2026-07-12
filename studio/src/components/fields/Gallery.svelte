@@ -1,5 +1,5 @@
 <script>
-  import { markDirty } from '../../lib/store.svelte.js';
+  import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
   import { pickImages } from '../../lib/images.js';
   let { entry, sec, variant = 'grid', mapStyle = false, aspect = '16/10' } = $props();
   const imgs = $derived(entry.data[sec.key]);
@@ -13,7 +13,7 @@
 
   async function add(){ const start = imgs.length; const urls = await pickImages(true); if (urls && urls.length){ imgs.push(...urls); cur = start; markDirty(); } }
   async function replace(){ const urls = await pickImages(false); if (urls && urls[0]){ if (imgs.length) imgs[0] = urls[0]; else imgs.push(urls[0]); markDirty(); } }
-  function del(i){ imgs.splice(i, 1); markDirty(); }
+  function del(i){ if (!confirmDelete(true, 'this image')) return; imgs.splice(i, 1); markDirty(); }
 </script>
 
 {#if variant === 'sigil'}

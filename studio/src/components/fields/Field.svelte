@@ -11,6 +11,7 @@
   import Lineage from './Lineage.svelte';
   import AllegianceWeb from './AllegianceWeb.svelte';
   import EventTimeline from './EventTimeline.svelte';
+  import Spotify from './Spotify.svelte';
 
   let { entry, sec, others } = $props();
   function setRichline(v){ entry.data[sec.key] = v; markDirty(); }
@@ -38,6 +39,8 @@
   <AllegianceWeb {entry} {sec} {others} />
 {:else if sec.type === 'eventtimeline'}
   <EventTimeline {entry} {sec} />
+{:else if sec.type === 'spotify'}
+  <Spotify items={entry.data[sec.key]} />
 {/if}
 
 <style>

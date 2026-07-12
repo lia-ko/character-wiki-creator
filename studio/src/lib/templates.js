@@ -24,8 +24,10 @@ export const TEMPLATES = {
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Age','Height','Pronouns','Origin','Role','Status','Languages'] },
       { key: 'bio', label: 'Biography', type: 'richsections', slot: 'main' },
       { key: 'relationships', label: 'Relationships', type: 'relations', slot: 'main' },
+      { key: 'homes', label: 'Home & haunts', type: 'relations', slot: 'main', display: 'expand' },
       { key: 'tropes', label: 'Tropes', type: 'taggroups', slot: 'main' },
       { key: 'excerpts', label: 'Excerpts', type: 'excerpts', slot: 'main' },
+      { key: 'soundtrack', label: 'Soundtrack', type: 'spotify', slot: 'main' },
     ],
   },
   location: {
@@ -37,7 +39,35 @@ export const TEMPLATES = {
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','Type','Population','Ruler','Climate','Status'] },
       { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
       { key: 'notable', label: 'Notable figures & sites', type: 'relations', slot: 'main', display: 'expand' },
+      { key: 'businesses', label: 'Shops & businesses', type: 'relations', slot: 'main', display: 'expand' },
       { key: 'features', label: 'Features', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  dwelling: {
+    type: 'dwelling', label: 'Dwelling / Base', plural: 'Dwellings', icon: '⏢', layout: 'hero', media: 'feature',
+    title: { ph: 'Place name (e.g. Ravenhold Manor)' }, subtitle: { ph: 'kind (manor, safehouse, hideout, ship…)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Kind','Owner','Located in','Occupants','Built','Status'] },
+      { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
+      { key: 'occupants', label: 'Occupants & staff', type: 'relations', slot: 'main', display: 'expand' },
+      { key: 'features', label: 'Rooms & features', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  business: {
+    type: 'business', label: 'Business / Establishment', plural: 'Businesses', icon: '⚖', layout: 'hero', media: 'feature',
+    title: { ph: 'Establishment name (e.g. The Prancing Pony)' }, subtitle: { ph: 'kind (tavern, smithy, shop…)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Storefront & imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Proprietor','Located in','Founded','Specialty','Status'] },
+      { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
+      { key: 'staff', label: 'Proprietor & staff', type: 'relations', slot: 'main' },
+      { key: 'wares', label: 'Wares & services', type: 'taggroups', slot: 'main' },
+      { key: 'patrons', label: 'Patrons & ties', type: 'relations', slot: 'main' },
       { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
     ],
   },
@@ -64,6 +94,7 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Emblem & imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Founded','Seat','Leader','Size','Allegiance','Status'] },
       { key: 'history', label: 'History', type: 'richsections', slot: 'main' },
+      { key: 'base', label: 'Base of operations', type: 'relations', slot: 'main', display: 'expand' },
       { key: 'members', label: 'Members & ranks', type: 'relations', slot: 'main' },
       { key: 'ties', label: 'Allies & rivals', type: 'relations', slot: 'main' },
       { key: 'tenets', label: 'Tenets & traits', type: 'taggroups', slot: 'main' },
@@ -133,7 +164,16 @@ export const TEMPLATES = {
 };
 
 // Display order for the type picker / project view.
-export const ENTRY_TYPES = ['character','house','organization','realm','location','lore','item','event','plot'];
+export const ENTRY_TYPES = ['character','house','organization','realm','location','business','dwelling','lore','item','event','plot'];
+
+// Type families — group the entry types for the project-view category filter + the
+// "New entry" picker. Source of truth for section order too (people → places → story → lore).
+export const FAMILIES = [
+  { key: 'people', label: 'People', types: ['character','house','organization'] },
+  { key: 'places', label: 'Places', types: ['realm','location','business','dwelling'] },
+  { key: 'story',  label: 'Story',  types: ['event','plot'] },
+  { key: 'lore',   label: 'Lore',   types: ['lore','item'] },
+];
 
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
 export const TYPE_ALIASES = { faction: 'organization' };
@@ -154,6 +194,7 @@ export function emptyValue(section){
     case 'lineage': return { nodes: [] };
     case 'allegianceweb': return [];
     case 'eventtimeline': return null;
+    case 'spotify': return [];
     default: return '';
   }
 }

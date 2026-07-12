@@ -4,9 +4,10 @@
    Powers both the in-app Preview and the .zip exporter. No Svelte, no editing. */
 
 import { esc, richToParas, richToLine } from './richtext.js';
-import { templateFor, ENTRY_TYPES } from './templates.js';
+import { templateFor, ENTRY_TYPES, FAMILIES } from './templates.js';
 import { coverOf } from './model.js';
 import { paletteVars, palById, fontVars, fontFaceCSS } from './theme.js';
+import { embedUrl, embedHeight } from './spotify.js';
 import { READER_CSS } from './exportcss.js';
 
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'sec';
@@ -23,8 +24,8 @@ function statsHTML(rows){
   const r = (rows || []).filter(s => s && s.k).map(s => `<div class="r"><span class="k">${esc(s.k)}</span><span class="v">${s.v ? esc(s.v) : '<span class="empty">—</span>'}</span></div>`).join('');
   return r ? `<div class="stats">${r}</div>` : '';
 }
-function sectionsHTML(list){
-  return (list || []).map(s => `<h3 id="${esc(slug(s.h))}">${esc(s.h || 'Section')}</h3>${richToParas(s.body)}`).join('');
+function sectionsHTML(list, ctx){
+  return (list || []).map(s => `<h3 id="${esc(slug(s.h))}">${esc(s.h || 'Section')}</h3>${richToParas(s.body, ctx)}`).join('');
 }
 function relName(r, ctx){ const nm = esc(r.name || '—'); const h = r.targetId && ctx.href(r.targetId); return h ? `<a href="${esc(h)}">${nm}</a>` : nm; }
 function relImg(r, ctx){ return r.img || (r.targetId && ctx.cover && ctx.cover(r.targetId)) || ''; }
@@ -36,7 +37,7 @@ function relationsHTML(list, sec, ctx){
     const thumb = `<span class="rthumb"${img ? ` style="background-image:url(${esc(img)})"` : ''}></span>`;
     const port = `<div class="rport"${img ? ` style="background-image:url(${esc(img)})"` : ''}></div>`;
     const meta = esc([r.role, r.status].filter(Boolean).join(' · '));
-    return `<details class="rel"${i === 0 ? ' open' : ''}><summary>${thumb}<span class="rwho"><span class="rnm">${relName(r, ctx)}</span>${meta ? `<span class="rmeta">${meta}</span>` : ''}</span><span class="chev"></span></summary><div class="rbody">${port}<div class="rtxt">${richToParas(r.body)}</div></div></details>`;
+    return `<details class="rel"${i === 0 ? ' open' : ''}><summary>${thumb}<span class="rwho"><span class="rnm">${relName(r, ctx)}</span>${meta ? `<span class="rmeta">${meta}</span>` : ''}</span><span class="chev"></span></summary><div class="rbody">${port}<div class="rtxt">${richToParas(r.body, ctx)}</div></div></details>`;
   }).join('') + `</div>`;
 }
 function tagsHTML(cats){
@@ -48,9 +49,9 @@ function tagsHTML(cats){
     return `<div class="tcat"><h4>${esc(c.name || 'Category')}</h4><div class="chips">${chips}</div></div>`;
   }).join('');
 }
-function excerptsHTML(list){
+function excerptsHTML(list, ctx){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
-  return list.map((e, i) => `<details class="exc"${i === 0 ? ' open' : ''}><summary>${esc(e.title || 'Excerpt')}</summary><div class="eb">${richToParas(e.body)}${e.source ? `<div class="src">${esc(e.source)}</div>` : ''}</div></details>`).join('');
+  return list.map((e, i) => `<details class="exc"${i === 0 ? ' open' : ''}><summary>${esc(e.title || 'Excerpt')}</summary><div class="eb">${richToParas(e.body, ctx)}${e.source ? `<div class="src">${esc(e.source)}</div>` : ''}</div></details>`).join('');
 }
 function outlineHTML(o){
   const acts = (o && o.acts) || [];
@@ -92,25 +93,70 @@ function timelineHTML(entry, ctx){
   }).join('') + `</div></div>`;
 }
 
+function spotifyHTML(list){
+  if (!list || !list.length) return '';
+  return `<div class="embeds">` + list.map(it =>
+    `<iframe class="spembed" title="Spotify ${esc(it.type)}" src="${esc(embedUrl(it))}" width="100%" height="${embedHeight(it)}" loading="lazy" frameborder="0" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>`
+  ).join('') + `</div>`;
+}
+
 function fieldHTML(entry, sec, ctx){
   const v = entry.data ? entry.data[sec.key] : undefined;
   switch (sec.type){
-    case 'richline': return v && String(v).trim() ? `<div class="lead">${richToLine(v)}</div>` : '';
+    case 'richline': return v && String(v).trim() ? `<div class="lead">${richToLine(v, ctx)}</div>` : '';
     case 'stats': return statsHTML(v);
     case 'gallery': return galleryHTML(v);
-    case 'richsections': return sectionsHTML(v);
+    case 'richsections': return sectionsHTML(v, ctx);
     case 'relations': return relationsHTML(v, sec, ctx);
     case 'taggroups': return tagsHTML(v);
-    case 'excerpts': return excerptsHTML(v);
+    case 'excerpts': return excerptsHTML(v, ctx);
     case 'outline': return outlineHTML(v);
     case 'lineage': return lineageHTML(v, ctx);
     case 'allegianceweb': return webHTML(v, entry, ctx);
     case 'eventtimeline': return timelineHTML(entry, ctx);
+    case 'spotify': return spotifyHTML(v);
     default: return '';
   }
 }
 
+// persistent site sidebar: families -> types (collapsible) -> entry links, current highlighted
+function sidenavHTML(project, ctx){
+  const byType = {};
+  (project.entries || []).forEach(e => { (byType[e.type] || (byType[e.type] = [])).push(e); });
+  const fams = FAMILIES.map(f => {
+    const types = f.types.filter(t => (byType[t] || []).length);
+    if (!types.length) return '';
+    const blocks = types.map(t => {
+      const tpl = templateFor(t);
+      const items = byType[t].map(e => {
+        const cur = e.id === ctx.currentId; const label = esc(e.title || 'Untitled'); const h = ctx.href(e.id);
+        return `<li class="${cur ? 'cur' : ''}">${cur || !h ? `<span>${label}</span>` : `<a href="${esc(h)}">${label}</a>`}</li>`;
+      }).join('');
+      const open = byType[t].some(e => e.id === ctx.currentId) ? ' open' : '';
+      return `<details class="ntype"${open}><summary><span class="nic">${tpl.icon}</span><span class="nlbl">${esc(tpl.plural)}</span><span class="nct">${byType[t].length}</span></summary><ul>${items}</ul></details>`;
+    }).join('');
+    return `<div class="nfam"><div class="nfamh">${esc(f.label)}</div>${blocks}</div>`;
+  }).join('');
+  const hub = ctx.hubHref ? `<a class="nhub" href="${esc(ctx.hubHref)}">${esc(project.name || 'Project')}</a>` : `<span class="nhub cur">${esc(project.name || 'Project')}</span>`;
+  return `<aside class="sidenav"><div class="navhead">${hub}</div><nav class="navtree">${fams}</nav></aside>`;
+}
+const NAV_TOGGLE = `<button class="navtoggle" data-navtoggle aria-label="Toggle navigation">☰</button>`;
+const shell = (nav, content) => `<div class="shell">${nav}<button class="navback" data-navtoggle aria-label="Close navigation"></button><div class="content">${content}</div></div>`;
+
 const heading = (sec, inner) => sec.lead ? inner : `<h2 id="${esc(slug(sec.label))}">${esc(sec.label)}</h2>${inner}`;
+
+// read-only reverse links: "who points at this entry" (ctx.backlinks precomputed by the caller)
+function backlinksHTML(backlinks, ctx){
+  if (!backlinks || !backlinks.length) return '';
+  const rows = backlinks.map(b => {
+    const tpl = templateFor(b.type);
+    const h = ctx.href(b.id); const nm = esc(b.title || 'Untitled');
+    const name = h ? `<a href="${esc(h)}">${nm}</a>` : nm;
+    const meta = esc([b.section, b.role].filter(Boolean).join(' · '));
+    return `<li class="bl"><span class="blic">${tpl.icon}</span><span class="blnm">${name}</span>${meta ? `<span class="blmeta">${meta}</span>` : ''}</li>`;
+  }).join('');
+  return `<h2 id="linked-from" class="blh">Linked from</h2><ul class="bllist">${rows}</ul>`;
+}
 
 export function renderEntry(entry, ctx){
   const tpl = templateFor(entry.type);
@@ -118,7 +164,7 @@ export function renderEntry(entry, ctx){
   const gallerySec = tpl.sections.find(s => s.type === 'gallery');
   const statsSec = tpl.sections.find(s => s.type === 'stats');
   const bodySecs = tpl.sections.filter(s => s.slot !== 'aside');
-  const body = bodySecs.map(sec => { const inner = fieldHTML(entry, sec, ctx); return inner ? heading(sec, inner) : (sec.lead ? '' : ''); }).join('');
+  const body = bodySecs.map(sec => { const inner = fieldHTML(entry, sec, ctx); return inner ? heading(sec, inner) : (sec.lead ? '' : ''); }).join('') + backlinksHTML(ctx.backlinks, ctx);
   const title = `<div class="etitle"><h1>${esc(entry.title || 'Untitled')}</h1>${entry.subtitle ? (tpl.motto ? `<div class="words"><span>${esc(entry.subtitle)}</span></div>` : `<div class="esub">${esc(entry.subtitle)}</div>`) : ''}</div>`;
   const stats = statsSec ? fieldHTML(entry, statsSec, ctx) : '';
   const gal = gallerySec ? fieldHTML(entry, gallerySec, ctx) : '';
@@ -139,8 +185,10 @@ export function renderEntry(entry, ctx){
   }
 
   const crumb = ctx.hubHref ? `<a href="${esc(ctx.hubHref)}">&larr; ${esc(ctx.crumb || 'Back')}</a>` : `<span>${esc(ctx.crumb || '')}</span>`;
-  const topbar = `<div class="topbar"><span class="crumb">${crumb}</span><span class="tbadge">${esc(tpl.label)}</span></div>`;
-  return topbar + main;
+  const nav = ctx.project ? sidenavHTML(ctx.project, ctx) : '';
+  const topbar = `<div class="topbar">${nav ? NAV_TOGGLE : ''}<span class="crumb">${crumb}</span><span class="tbadge">${esc(tpl.label)}</span></div>`;
+  const content = topbar + main;
+  return nav ? shell(nav, content) : content;
 }
 
 function entryCard(e, href){
@@ -156,7 +204,10 @@ export function renderHub(project, ctx){
     const tpl = templateFor(t);
     return `<section class="hsec"><h2><span class="hic">${tpl.icon}</span> ${esc(tpl.plural)}</h2><div class="hgrid">${groups[t].map(e => entryCard(e, hrefs[e.id])).join('')}</div></section>`;
   }).join('');
-  return `<div class="hubwrap"><div class="hhero">${ctx.upHref ? `<a class="hup" href="${esc(ctx.upHref)}">&larr; All projects</a>` : ''}<div class="eyebrow">Project</div><h1>${esc(project.name || 'Project')}</h1><div class="hcount">${(project.entries || []).length} entries${project.genre ? ' · ' + esc(project.genre) : ''}</div></div>${secs}</div>`;
+  const sound = (project.spotify && project.spotify.length) ? `<section class="hsec"><h2><span class="hic">♪</span> Soundtrack</h2>${spotifyHTML(project.spotify)}</section>` : '';
+  const hub = `<div class="hubwrap"><div class="hhero">${ctx.upHref ? `<a class="hup" href="${esc(ctx.upHref)}">&larr; All projects</a>` : ''}<div class="eyebrow">Project</div><h1>${esc(project.name || 'Project')}</h1><div class="hcount">${(project.entries || []).length} entries${project.genre ? ' · ' + esc(project.genre) : ''}</div></div>${sound}${secs}</div>`;
+  const nav = sidenavHTML(project, { href: (id) => hrefs[id], currentId: null, hubHref: null });
+  return shell(nav, NAV_TOGGLE + hub);
 }
 export function renderIndex(ws, ctx){
   const hrefs = ctx.hrefs || {};
@@ -170,10 +221,10 @@ export function renderIndex(ws, ctx){
 }
 
 /* ---- reader JS: carousels + collapsibles are native <details>; only carousels need JS ---- */
-export const READER_JS = `(function(){document.querySelectorAll('.carousel').forEach(function(c){var st=c.querySelector('.cstage');var sl=[].slice.call(st.querySelectorAll('.cslide'));if(sl.length<2)return;var cnt=c.querySelector('.ccount');var i=0;function s(){sl.forEach(function(x,k){x.className='cslide'+(k===i?' on':'');});if(cnt)cnt.textContent=(i+1)+' / '+sl.length;}var p=c.querySelector('.cprev'),n=c.querySelector('.cnext');if(p)p.onclick=function(){i=(i-1+sl.length)%sl.length;s();};if(n)n.onclick=function(){i=(i+1)%sl.length;s();};});})();`;
+export const READER_JS = `(function(){document.querySelectorAll('.carousel').forEach(function(c){var st=c.querySelector('.cstage');var sl=[].slice.call(st.querySelectorAll('.cslide'));if(sl.length<2)return;var cnt=c.querySelector('.ccount');var i=0;function s(){sl.forEach(function(x,k){x.className='cslide'+(k===i?' on':'');});if(cnt)cnt.textContent=(i+1)+' / '+sl.length;}var p=c.querySelector('.cprev'),n=c.querySelector('.cnext');if(p)p.onclick=function(){i=(i-1+sl.length)%sl.length;s();};if(n)n.onclick=function(){i=(i+1)%sl.length;s();};});var sh=document.querySelector('.shell');if(sh){document.querySelectorAll('[data-navtoggle]').forEach(function(b){b.onclick=function(){sh.classList.toggle('nav-open');};});}})();`;
 
-export function docShell({ title, palette, headFont, bodyFont, headScale, bodyScale, portraitScale, fontPrefix, bodyHTML }){
-  const faces = fontFaceCSS(fontPrefix || '/fonts/', [headFont, bodyFont]);
+export function docShell({ title, palette, headFont, bodyFont, headScale, bodyScale, portraitScale, fontPrefix, faceCSS, bodyHTML }){
+  const faces = faceCSS != null ? faceCSS : fontFaceCSS(fontPrefix || '/fonts/', [headFont, bodyFont]);
   const head = paletteVars(palById(palette)) + fontVars(headFont, bodyFont, headScale, bodyScale, portraitScale) + '\n' + faces + '\n' + READER_CSS;
   return `<!DOCTYPE html>\n<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${esc(title)}</title><style>${head}</style></head><body>${bodyHTML}<script>${READER_JS}</script></body></html>`;
 }

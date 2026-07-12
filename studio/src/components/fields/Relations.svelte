@@ -1,5 +1,5 @@
 <script>
-  import { markDirty, openEntry } from '../../lib/store.svelte.js';
+  import { markDirty, openEntry, confirmDelete } from '../../lib/store.svelte.js';
   import { pickImages } from '../../lib/images.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
@@ -12,7 +12,7 @@
   let open = $state({ 0: true });
   function toggle(i){ open[i] = !open[i]; }
   function add(){ list.push({ name: 'New relation', role: '', status: '', targetId: '', img: '', body: '' }); open[list.length - 1] = true; markDirty(); }
-  function del(i){ list.splice(i, 1); markDirty(); }
+  function del(i){ const r = list[i]; const named = r.name && r.name !== 'New relation'; const has = named || r.body || r.role || r.status || r.img; if (!confirmDelete(has, named ? '“' + r.name + '”' : 'this entry')) return; list.splice(i, 1); markDirty(); }
   function setBody(i, v){ list[i].body = v; markDirty(); }
   async function setImg(i){ const u = await pickImages(false); if (u && u[0]){ list[i].img = u[0]; markDirty(); } }
 </script>
@@ -34,8 +34,7 @@
       {#if open[i]}
         <div class="rbody">
           <button class="rport" style={imgOf(r) ? `background-image:url(${imgOf(r)})` : ''} onclick={() => setImg(i)} title="set image">
-            {#if !imgOf(r)}<span class="ph">click to add image</span>
-            {:else if !r.img}<span class="ph pulled">from linked entry · click to override</span>{/if}
+            {#if !imgOf(r)}<span class="ph">click to add image</span>{/if}
           </button>
           <div class="rmain">
             <RichEditor value={r.body} multiline placeholder="Write-up…" oninput={(v) => setBody(i, v)} />
@@ -72,7 +71,6 @@
   .rport:hover{border-color:var(--accent)}
   .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-align:center;padding:8px}
   .rthumb .ph{position:static;padding:0}
-  .ph.pulled{font-style:italic}
   .rmain{display:flex;flex-direction:column;gap:10px;min-width:0}
   .rlink{align-self:flex-start;font-family:var(--sans);font-size:.72rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:6px 9px}
   .addbtn{width:100%;margin-top:4px;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px;cursor:pointer;font-family:var(--sans);font-size:.8rem}

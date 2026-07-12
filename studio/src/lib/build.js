@@ -2,7 +2,7 @@
    Assembles the whole workspace into self-contained static HTML files + fonts,
    cross-linked, and packages them as a .zip. */
 
-import { coverOf, slugify } from './model.js';
+import { coverOf, slugify, backlinksFor } from './model.js';
 import { renderEntry, renderHub, renderIndex, docShell } from './render.js';
 import { buildZip } from './zip.js';
 import { faceById } from './theme.js';
@@ -35,12 +35,16 @@ export async function buildWorkspace(ws){
   ws.projects.forEach(p => {
     const folder = projLoc[p.id];
     const events = projectEvents(p);
+    const byId = {}; p.entries.forEach(e => byId[e.id] = e);
     const hubHrefs = {}; p.entries.forEach(e => hubHrefs[e.id] = entryLoc[e.id].file);
     p.entries.forEach(e => {
       const ctx = {
         href: (id) => { const t = entryLoc[id]; if (!t) return null; return t.folder === folder ? t.file : '../' + t.folder + '/' + t.file; },
         cover: (id) => coverMap[id] || null,
+        title: (id) => byId[id] ? byId[id].title : null,
         events, hubHref: 'main.html', crumb: p.name,
+        backlinks: backlinksFor(e, p),
+        project: p, currentId: e.id,
       };
       files.push({ name: folder + '/' + entryLoc[e.id].file, text: doc((e.title || 'Entry') + ' — ' + (p.name || ''), p, '../fonts/', renderEntry(e, ctx)) });
     });

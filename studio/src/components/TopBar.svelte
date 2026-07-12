@@ -1,5 +1,5 @@
 <script>
-  import { app, curProject, curEntry, openProjects, openProject, openMapLab, clearDirty, markDirty, saveNow } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProjects, openProject, openMapLab, openSearch, clearDirty, markDirty, saveNow } from '../lib/store.svelte.js';
   import { slugify, migrateWorkspace } from '../lib/model.js';
   import { buildWorkspace } from '../lib/build.js';
 
@@ -59,6 +59,7 @@
     {/if}
   </span>
   <span class="grow"></span>
+  <button class="search" onclick={openSearch} title="Search (⌘K)"><span class="si">⌕</span> Search <kbd>⌘K</kbd></button>
   {#if app.dirty}<span class="unsaved"><span class="u"></span> unsaved</span>{/if}
   <button class="abtn" class:on={app.view === 'maplab'} onclick={openMapLab}>⬡ Map Lab</button>
   <button class="abtn" onclick={() => fileInput.click()}>Open</button>
@@ -77,6 +78,10 @@
   .crumbs b{color:var(--ink);font-weight:400}
   .sep{opacity:.5}
   .grow{flex:1}
+  .search{display:flex;align-items:center;gap:8px;font:inherit;font-size:.78rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);border-radius:8px;padding:6px 10px 6px 12px;cursor:pointer;white-space:nowrap}
+  .search:hover{border-color:var(--accent);color:var(--ink)}
+  .search .si{color:var(--accent-soft);font-size:.95rem}
+  .search kbd{font-family:var(--mono);font-size:.6rem;background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:1px 5px;color:var(--faint)}
   .unsaved{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;gap:6px;white-space:nowrap}
   .unsaved .u{width:7px;height:7px;border-radius:50%;background:var(--accent)}
   .abtn{font:inherit;font-size:.78rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}

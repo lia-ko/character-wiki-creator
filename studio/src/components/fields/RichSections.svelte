@@ -1,11 +1,11 @@
 <script>
-  import { markDirty } from '../../lib/store.svelte.js';
+  import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
   let { entry, sec } = $props();
   const list = $derived(entry.data[sec.key]);
   function add(){ list.push({ h: 'Section', body: '' }); markDirty(); }
-  function del(i){ list.splice(i, 1); markDirty(); }
+  function del(i){ const s = list[i]; const has = (s.body && s.body.trim()) || (s.h && s.h !== 'Section'); if (!confirmDelete(has, s.h ? '“' + s.h + '”' : 'this section')) return; list.splice(i, 1); markDirty(); }
   function setBody(i, v){ list[i].body = v; markDirty(); }
 </script>
 

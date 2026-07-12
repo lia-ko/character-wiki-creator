@@ -9,7 +9,13 @@ export const app = $state({
   view: 'projects',   // 'projects' | 'project' | 'entry'
   mode: 'edit',       // 'edit' | 'preview'
   dirty: false,
+  searchOpen: false,
 });
+
+/* ---- command palette (⌘K search / quick-jump) ---- */
+export function openSearch(){ app.searchOpen = true; }
+export function closeSearch(){ app.searchOpen = false; }
+export function toggleSearch(){ app.searchOpen = !app.searchOpen; }
 
 // point selection at the seeded project on boot
 app.projectId = app.ws.projects[0].id;
@@ -41,6 +47,9 @@ export function saveNow(){ if (restored) idbSet('workspace', $state.snapshot(app
 
 export function markDirty(){ app.dirty = true; scheduleSave(); }
 export function clearDirty(){ app.dirty = false; }
+
+// confirm a delete only when the item actually holds content (blank items delete silently)
+export function confirmDelete(hasContent, what){ return !hasContent || confirm('Delete ' + what + '? This can’t be undone.'); }
 
 /* ---- navigation ---- */
 export function openProjects(){ app.view = 'projects'; }
