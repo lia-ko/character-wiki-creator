@@ -1,23 +1,22 @@
 <script>
-  import { curProject, curEntry, openProject, openEntry, markDirty } from '../lib/store.svelte.js';
-  import { templateFor, emptyValue } from '../lib/templates.js';
-  import { coverOf, backlinksFor } from '../lib/model.js';
+  import { curProject, curEntry, openProject, openEntry, markDirty, toast } from '../lib/store.svelte.js';
+  import { templateFor } from '../lib/templates.js';
+  import { coverOf, backlinksFor, ensureEntryData } from '../lib/model.js';
   import { exportSingleEntry } from '../lib/exportentry.js';
 
   let exporting = $state(false);
   async function exportSheet(){
     if (exporting) return; exporting = true;
     try { await exportSingleEntry(entry, project); }
-    catch (e) { alert('Export failed: ' + (e && e.message || e)); }
+    catch (e) { toast('Export failed: ' + (e && e.message || e)); }
     exporting = false;
   }
   import { renderEntry, docShell } from '../lib/render.js';
-  import { projectEvents } from '../lib/build.js';
+  import { readerMaps, baseCtx } from '../lib/readerctx.js';
 
   function previewEntry(){
     const p = curProject();
-    const coverMap = {}; p.entries.forEach(e => coverMap[e.id] = coverOf(e));
-    const ctx = { href: () => null, cover: (id) => coverMap[id] || null, title: (id) => { const e = p.entries.find(x => x.id === id); return e ? e.title : null; }, events: projectEvents(p), hubHref: null, crumb: p.name, backlinks: backlinksFor(entry, p) };
+    const ctx = baseCtx(p, readerMaps(p), { href: () => null, entry });
     const html = docShell({ title: entry.title || 'Entry', palette: p.palette, headFont: p.headFont, bodyFont: p.bodyFont, headScale: p.headScale, bodyScale: p.bodyScale, portraitScale: p.portraitScale, fontPrefix: location.origin + '/fonts/', bodyHTML: renderEntry(entry, ctx) });
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     window.open(url, '_blank');
@@ -45,11 +44,7 @@
 
   // Backfill section keys added to the template after this entry was created (e.g. Soundtrack),
   // so their fields have a value to bind to. Silent — persists on the next real edit.
-  $effect(() => {
-    if (entry && tpl && entry.data){
-      for (const s of tpl.sections){ if (!(s.key in entry.data)) entry.data[s.key] = emptyValue(s); }
-    }
-  });
+  $effect(() => { if (entry) ensureEntryData(entry); });
 </script>
 
 {#if entry && tpl}
@@ -154,7 +149,7 @@
 {/if}
 
 <style>
-  .charbar{position:sticky;top:52px;z-index:50;display:flex;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--rule);background:var(--panel);flex-wrap:wrap}
+  .charbar{position:sticky;top:var(--appbar-h);z-index:50;display:flex;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--rule);background:var(--panel);flex-wrap:wrap}
   .charbar button{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .charbar button:hover{border-color:var(--accent)}
   .cbt{font-family:var(--head);font-size:1.1rem;color:var(--ink)}
@@ -180,7 +175,7 @@
 
   /* split (character, item) */
   .wsplit{max-width:1160px;margin:0 auto;padding:28px 30px 90px;display:grid;grid-template-columns:minmax(180px,calc(340px * var(--ps,1))) 1fr;gap:36px;align-items:start}
-  .wsplit .media{position:sticky;top:104px}
+  .wsplit .media{position:sticky;top:calc(var(--appbar-h) + 52px)}
   .wsplit .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 
   /* hero (house, org, realm, location, event) */

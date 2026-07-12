@@ -1,5 +1,5 @@
 <script>
-  import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow } from '../lib/store.svelte.js';
+  import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow, toast, undo } from '../lib/store.svelte.js';
   import { coverOf, entriesByType } from '../lib/model.js';
   import { ENTRY_TYPES, FAMILIES, templateFor } from '../lib/templates.js';
   import ThemeBar from './ThemeBar.svelte';
@@ -8,6 +8,8 @@
   import { pickImages } from '../lib/images.js';
   import { exportEntryBundle } from '../lib/exportentry.js';
   import Spotify from './fields/Spotify.svelte';
+  import NewEntryMenu from './NewEntryMenu.svelte';
+  import SelectBar from './SelectBar.svelte';
 
   const fallbackCover = $derived.by(() => { for (const e of (p.entries || [])){ const c = coverOf(e); if (c) return c; } return ''; });
   async function setCover(){ const u = await pickImages(false); if (u && u[0]){ p.cover = u[0]; markDirty(); } }
@@ -45,12 +47,10 @@
   // category filter + unified "New entry" picker
   const familyOrder = FAMILIES.flatMap(f => f.types);
   let activeCat = $state('all');
-  let newOpen = $state(false);
   const visibleTypes = $derived(activeCat === 'all' ? familyOrder : (FAMILIES.find(f => f.key === activeCat)?.types || []));
   const shownTypes = $derived(visibleTypes.filter(t => (groups[t] || []).length));   // hide empty type-sections
   const activeLabel = $derived(activeCat === 'all' ? 'entries' : (FAMILIES.find(f => f.key === activeCat)?.label.toLowerCase() || ''));
   const catCount = (types) => types.reduce((n, t) => n + ((groups[t] || []).length), 0);
-  function create(type){ newOpen = false; addEntry(type); }
 
   // multi-select export
   let selecting = $state(false);
@@ -64,7 +64,7 @@
     const chosen = (p.entries || []).filter(e => selected[e.id]);
     if (!chosen.length || bundleExporting) return;
     bundleExporting = true;
-    try { await exportEntryBundle(p, chosen); } catch (e) { alert('Export failed: ' + (e && e.message || e)); }
+    try { await exportEntryBundle(p, chosen); } catch (e) { toast('Export failed: ' + (e && e.message || e)); }
     bundleExporting = false; selecting = false; selected = {};
   }
 
@@ -78,7 +78,7 @@
     saveNow();
   }
 
-  function del(e, id){ e.stopPropagation(); if (confirm('Delete this entry?')) deleteEntry(id); }
+  function del(e, id){ e.stopPropagation(); const entry = (p.entries || []).find(x => x.id === id); deleteEntry(id); toast(`Moved “${entry?.title || 'entry'}” to trash`, { actionLabel: 'Undo', action: undo }); }
 </script>
 
 <div class="wrap">
@@ -124,21 +124,7 @@
     </div>
     <div class="tbactions">
       <button class="selstart" onclick={startSelect} title="select sheets to export">☑ Select</button>
-    <div class="newwrap">
-      <button class="newbtn" onclick={() => newOpen = !newOpen} aria-expanded={newOpen}>＋ New entry <span class="caret">▾</span></button>
-      {#if newOpen}
-        <button class="backdrop" onclick={() => newOpen = false} aria-label="close menu"></button>
-        <div class="menu">
-          {#each FAMILIES as f}
-            <div class="menufam">{f.label}</div>
-            {#each f.types as t}
-              {@const tpl = templateFor(t)}
-              <button class="menuitem" onclick={() => create(t)}><span class="mi-ic">{tpl.icon}</span> {tpl.label}</button>
-            {/each}
-          {/each}
-        </div>
-      {/if}
-    </div>
+      <NewEntryMenu oncreate={addEntry} />
     </div>
   </div>
 
@@ -201,13 +187,7 @@
 </div>
 
 {#if selecting}
-  <div class="selbar">
-    <span class="selinfo"><b>{selCount}</b> selected</span>
-    <span class="selhint">{selCount <= 1 ? 'exports one .html sheet' : 'exports a cross-linked .zip'}</span>
-    <span class="grow"></span>
-    <button class="selcancel" onclick={cancelSelect}>Cancel</button>
-    <button class="selexport" onclick={exportSelected} disabled={!selCount || bundleExporting}>{bundleExporting ? 'Exporting…' : 'Export ↓'}</button>
-  </div>
+  <SelectBar count={selCount} busy={bundleExporting} oncancel={cancelSelect} onexport={exportSelected} />
 {/if}
 
 <style>
@@ -241,16 +221,6 @@
   .tbactions{display:flex;align-items:center;gap:10px}
   .selstart{font:inherit;font-size:.78rem;background:none;color:var(--muted);border:1px solid var(--rule);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
   .selstart:hover{border-color:var(--accent);color:var(--ink)}
-  .newwrap{position:relative;flex:none}
-  .newbtn{font:inherit;font-size:.8rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 15px;cursor:pointer;display:flex;align-items:center;gap:8px}
-  .newbtn:hover{opacity:.92}
-  .caret{font-size:.62rem;opacity:.85}
-  .backdrop{position:fixed;inset:0;z-index:40;background:none;border:none;cursor:default}
-  .menu{position:absolute;top:calc(100% + 6px);right:0;z-index:41;min-width:210px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-height:min(70vh,460px);overflow:auto}
-  .menufam{font-family:var(--mono);font-size:.58rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);padding:9px 10px 4px}
-  .menuitem{display:flex;align-items:center;gap:10px;width:100%;font:inherit;font-size:.86rem;text-align:left;background:none;border:none;border-radius:7px;padding:7px 10px;cursor:pointer;color:var(--ink)}
-  .menuitem:hover{background:var(--panel-2)}
-  .mi-ic{color:var(--accent-soft);width:1.1em;text-align:center;flex:none}
   .typesec{margin:30px 0}
   .typehead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
   h2{font-family:var(--head);font-weight:400;font-size:calc(1.4rem*var(--hs,1));color:var(--ink);margin:0;display:flex;align-items:center;gap:10px}
@@ -279,14 +249,4 @@
   .kebab:hover{background:var(--accent)}
   .emptyall{color:var(--faint);font-style:italic;font-size:.9rem;text-align:center;padding:48px 20px}
   .emptyall b{color:var(--muted);font-style:normal}
-  .selbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:120;display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.5);padding:10px 12px 10px 18px;max-width:min(620px,92vw)}
-  .selinfo{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
-  .selinfo b{color:var(--ink);font-size:.95rem}
-  .selhint{font-size:.72rem;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .selbar .grow{flex:1;min-width:8px}
-  .selcancel{font:inherit;font-size:.78rem;background:none;color:var(--muted);border:1px solid var(--rule);border-radius:8px;padding:7px 13px;cursor:pointer}
-  .selcancel:hover{border-color:var(--accent);color:var(--ink)}
-  .selexport{font:inherit;font-size:.78rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 15px;cursor:pointer;white-space:nowrap}
-  .selexport:hover{opacity:.92}
-  .selexport:disabled{opacity:.5;cursor:default}
 </style>

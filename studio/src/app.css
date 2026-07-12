@@ -1,3 +1,4 @@
+:root{--appbar-h:52px}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100vh}
 body{background:var(--bg,#15171c);color:var(--ink,#dfe3ea);font-family:var(--sans,system-ui,'Helvetica Neue',Arial,sans-serif);font-size:14px;-webkit-font-smoothing:antialiased}

@@ -6,13 +6,14 @@ import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES } from './templates.
 
 // Normalize any renamed/aliased entry types in a loaded workspace (e.g. faction → organization).
 export function migrateWorkspace(ws){
+  if (!Array.isArray(ws.trash)) ws.trash = [];
   (ws?.projects || []).forEach(p => {
     if (p.portraitScale == null) p.portraitScale = 1;
     if (p.cover == null) p.cover = '';
     if (p.spotify == null) p.spotify = [];
     (p.entries || []).forEach(e => {
       if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
-      if (e.data){ templateFor(e.type).sections.forEach(s => { if (!(s.key in e.data)) e.data[s.key] = emptyValue(s); }); }
+      ensureEntryData(e);
     });
   });
   return ws;
@@ -27,7 +28,18 @@ export function slugify(s){
 export function uniqueSlug(name, used){
   const base = slugify(name); let s = base, i = 2;
   while (used[s]){ s = base + '-' + i; i++; }
-  return s;
+  used[s] = 1; return s;
+}
+
+// Events in a project, sorted for the shared timeline (best-effort year from a Date-ish stat).
+export function projectEvents(project){
+  return (project.entries || []).filter(e => e.type === 'event').map(e => {
+    const st = (e.data && e.data.stats) || [];
+    const hit = st.find(s => /date|year|when/i.test(s.k)) || st[0];
+    const dv = hit ? hit.v : '';
+    const m = String(dv || '').match(/-?\d+/g);
+    return { id: e.id, title: e.title, date: dv, year: m ? parseInt(m[m.length - 1], 10) : null };
+  }).sort((a, b) => { const au = a.year == null, bu = b.year == null; if (au && bu) return 0; if (au) return 1; if (bu) return -1; return a.year - b.year; });
 }
 
 export function createEntry(type, name){
@@ -35,6 +47,15 @@ export function createEntry(type, name){
   const data = {};
   tpl.sections.forEach(sec => { data[sec.key] = emptyValue(sec); });
   return { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', group: '', data };
+}
+
+// Backfill any template section keys missing from an entry's data (e.g. a section added to the
+// template after the entry was created). Used by both the loader (migrate) and the live editor.
+export function ensureEntryData(entry){
+  if (entry && entry.data){
+    templateFor(entry.type).sections.forEach(s => { if (!(s.key in entry.data)) entry.data[s.key] = emptyValue(s); });
+  }
+  return entry;
 }
 
 export function createProject(name, genre){
@@ -51,7 +72,7 @@ export function createWorkspace(){
   return {
     title: 'Your World', palette: 'slate',
     headFont: 'playfair-display', bodyFont: 'eb-garamond', headScale: 1, bodyScale: 1,
-    projects: [p],
+    projects: [p], trash: [],
   };
 }
 

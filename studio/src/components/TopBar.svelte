@@ -1,7 +1,8 @@
 <script>
-  import { app, curProject, curEntry, openProjects, openProject, openMapLab, openSearch, clearDirty, markDirty, saveNow } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProjects, openProject, openMapLab, openSearch, openTrash, undo, redo, clearDirty, markDirty, saveNow, toast } from '../lib/store.svelte.js';
   import { slugify, migrateWorkspace } from '../lib/model.js';
   import { buildWorkspace } from '../lib/build.js';
+  import { download } from '../lib/download.js';
 
   let fileInput;
   let exporting = $state(false);
@@ -10,23 +11,14 @@
     if (exporting) return; exporting = true;
     try {
       const blob = await buildWorkspace(app.ws);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = (slugify(app.ws.title) || 'world') + '-wiki.zip';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      download(blob, (slugify(app.ws.title) || 'world') + '-wiki.zip');
       clearDirty();
-    } catch (e) { alert('Export failed: ' + (e && e.message || e)); }
+    } catch (e) { toast('Export failed: ' + (e && e.message || e)); }
     exporting = false;
   }
 
   function saveJson(){
-    const blob = new Blob([JSON.stringify(app.ws)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (slugify(app.ws.title) || 'world') + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    download(new Blob([JSON.stringify(app.ws)], { type: 'application/json' }), (slugify(app.ws.title) || 'world') + '.json');
     clearDirty();
   }
   function openJson(e){
@@ -38,8 +30,8 @@
           app.ws = migrateWorkspace(data);
           app.projectId = data.projects[0]?.id || null;
           app.entryId = null; app.view = 'projects'; clearDirty(); saveNow();
-        } else alert('That does not look like a workspace file.');
-      } catch (_) { alert('Could not read that file.'); }
+        } else toast('That does not look like a workspace file.');
+      } catch (_) { toast('Could not read that file.'); }
     });
     e.target.value = '';
   }
@@ -61,6 +53,9 @@
   <span class="grow"></span>
   <button class="search" onclick={openSearch} title="Search (⌘K)"><span class="si">⌕</span> Search <kbd>⌘K</kbd></button>
   {#if app.dirty}<span class="unsaved"><span class="u"></span> unsaved</span>{/if}
+  <button class="abtn ico" onclick={undo} disabled={app.histIndex <= 0} title="Undo (⌘Z)">↶</button>
+  <button class="abtn ico" onclick={redo} disabled={app.histIndex >= app.histLen - 1} title="Redo (⌘⇧Z)">↷</button>
+  <button class="abtn" onclick={openTrash} title="Trash — restore deleted entries">Trash{#if app.ws.trash?.length} <span class="tcount">{app.ws.trash.length}</span>{/if}</button>
   <button class="abtn" class:on={app.view === 'maplab'} onclick={openMapLab}>⬡ Map Lab</button>
   <button class="abtn" onclick={() => fileInput.click()}>Open</button>
   <button class="abtn" onclick={saveJson}>Save</button>
@@ -69,7 +64,7 @@
 </div>
 
 <style>
-  .appbar{position:fixed;top:0;left:0;right:0;height:52px;z-index:100;display:flex;align-items:center;gap:14px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--rule);overflow-x:auto}
+  .appbar{position:fixed;top:0;left:0;right:0;height:var(--appbar-h);z-index:100;display:flex;align-items:center;gap:14px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--rule);overflow-x:auto}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;white-space:nowrap}
   .brand .mk{color:var(--accent-soft);font-family:var(--head);font-size:1.1rem}
   .brand span{color:var(--accent)}
@@ -88,4 +83,8 @@
   .abtn:hover{border-color:var(--accent)}
   .abtn.on{border-color:var(--accent);color:var(--ink)}
   .abtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .abtn.ico{padding:7px 10px;font-size:.95rem;line-height:1}
+  .abtn:disabled{opacity:.4;cursor:default}
+  .abtn:disabled:hover{border-color:var(--rule)}
+  .tcount{font-family:var(--mono);font-size:.6rem;color:var(--accent-soft)}
 </style>

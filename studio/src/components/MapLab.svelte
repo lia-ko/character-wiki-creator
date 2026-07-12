@@ -1,6 +1,7 @@
 <script>
   import { generate, STYLES, WATER } from '../lib/towngen.js';
   import { app, openProjects, openAnyEntry } from '../lib/store.svelte.js';
+  import { download } from '../lib/download.js';
 
   let uidn = 0;
   let pins = $state([]);
@@ -39,11 +40,10 @@
     s.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(s);
   }
-  function dl(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
-  function downloadSVG(){ dl(new Blob([svgString()], { type: 'image/svg+xml' }), slug() + '-map.svg'); }
+  function downloadSVG(){ download(new Blob([svgString()], { type: 'image/svg+xml' }), slug() + '-map.svg'); }
   function downloadPNG(){
     const str = svgString(); const img = new Image(); const scale = 2;
-    img.onload = () => { const cv = document.createElement('canvas'); cv.width = town.W * scale; cv.height = town.H * scale; const ctx = cv.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0); cv.toBlob(b => dl(b, slug() + '-map.png'), 'image/png'); };
+    img.onload = () => { const cv = document.createElement('canvas'); cv.width = town.W * scale; cv.height = town.H * scale; const ctx = cv.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0); cv.toBlob(b => download(b, slug() + '-map.png'), 'image/png'); };
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
   }
 </script>
@@ -158,7 +158,7 @@
 </div>
 
 <style>
-  .lab{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:calc(100vh - 52px)}
+  .lab{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:calc(100vh - var(--appbar-h))}
   .panel{border-right:1px solid var(--rule);padding:22px 20px;display:flex;flex-direction:column;gap:14px;background:var(--panel)}
   .back{align-self:flex-start;font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .back:hover{border-color:var(--accent)}

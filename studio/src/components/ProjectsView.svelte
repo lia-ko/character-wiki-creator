@@ -1,12 +1,12 @@
 <script>
-  import { app, openProject, addProject, deleteProject, markDirty } from '../lib/store.svelte.js';
+  import { app, openProject, addProject, deleteProject, markDirty, toast, undo } from '../lib/store.svelte.js';
   import { coverOf } from '../lib/model.js';
   import ThemeBar from './ThemeBar.svelte';
   import FontSample from './FontSample.svelte';
   import Reorder from './Reorder.svelte';
 
   const heroCover = (p) => { const es = p.entries || []; for (const e of es){ const c = coverOf(e); if (c) return c; } return ''; };
-  function del(e, id){ e.stopPropagation(); if (confirm('Delete this project and everything in it?')) deleteProject(id); }
+  function del(e, id){ e.stopPropagation(); const proj = app.ws.projects.find(x => x.id === id); deleteProject(id); toast(`Deleted project “${proj?.name || ''}”`, { actionLabel: 'Undo', action: undo }); }
 </script>
 
 <div class="wrap">

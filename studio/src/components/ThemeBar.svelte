@@ -1,6 +1,7 @@
 <script>
   import { PALETTES, SIZES } from '../lib/theme.js';
   import { markDirty } from '../lib/store.svelte.js';
+  import { dismissable } from '../lib/dismissable.js';
   import FontPicker from './FontPicker.svelte';
   let { target, showPortrait = false } = $props();
   const onchange = () => markDirty();
@@ -12,14 +13,13 @@
 
 <div class="htools">
   <label>Theme
-    <div class="ppick">
+    <div class="ppick" use:dismissable={() => paletteOpen = false}>
       <button type="button" class="pptrig" onclick={() => paletteOpen = !paletteOpen} aria-expanded={paletteOpen}>
         <span class="ppsw"><i style="background:{curPal.bg}"></i><i style="background:{curPal.accent}"></i><i style="background:{curPal.ink}"></i></span>
         <span class="ppname">{curPal.name}</span>
         <span class="ppcar">▾</span>
       </button>
       {#if paletteOpen}
-        <button class="ppback" onclick={() => paletteOpen = false} aria-label="close theme picker"></button>
         <div class="ppmenu">
           {#each PALETTES as p}
             <button type="button" class="pt" class:on={p.id === target.palette} onclick={() => pickPalette(p.id)} title={p.name}>
@@ -67,7 +67,6 @@
   .ppsw i{flex:1}
   .ppname{white-space:nowrap}
   .ppcar{font-size:.6rem;color:var(--faint)}
-  .ppback{position:fixed;inset:0;z-index:49;background:none;border:none;cursor:default}
   .ppmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:50;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(320px,86vw);max-height:min(60vh,430px);overflow:auto;padding:10px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
   .pt{display:flex;flex-direction:column;gap:5px;padding:5px;background:none;border:1px solid transparent;border-radius:8px;cursor:pointer}
   .pt:hover{border-color:var(--rule);background:var(--panel-2)}
