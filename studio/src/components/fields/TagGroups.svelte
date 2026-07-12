@@ -4,9 +4,9 @@
   let { entry, sec } = $props();
   const cats = $derived(entry.data[sec.key]);
   function addCat(){ cats.push({ name: 'Category', items: [] }); markDirty(); }
-  function delCat(ci){ const c = cats[ci]; const has = (c.items && c.items.length) || (c.name && c.name !== 'Category'); if (!confirmDelete(has, c.name ? '“' + c.name + '”' : 'this category')) return; cats.splice(ci, 1); markDirty(); }
+  async function delCat(ci){ const c = cats[ci]; const has = (c.items && c.items.length) || (c.name && c.name !== 'Category'); if (!(await confirmDelete(has, c.name ? '“' + c.name + '”' : 'this category'))) return; cats.splice(ci, 1); markDirty(); }
   function addItem(ci){ cats[ci].items.push({ name: 'Trait', note: '' }); markDirty(); }
-  function delItem(ci, ii){ const t = cats[ci].items[ii]; const has = (t.name && t.name !== 'Trait') || t.note; if (!confirmDelete(has, t.name || 'this entry')) return; cats[ci].items.splice(ii, 1); markDirty(); }
+  async function delItem(ci, ii){ const t = cats[ci].items[ii]; const has = (t.name && t.name !== 'Trait') || t.note; if (!(await confirmDelete(has, t.name || 'this entry'))) return; cats[ci].items.splice(ii, 1); markDirty(); }
 </script>
 
 <div class="cats">

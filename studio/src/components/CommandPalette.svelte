@@ -102,7 +102,7 @@
 {/if}
 
 <style>
-  .cmdk{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-start;justify-content:center;padding-top:12vh}
+  .cmdk{position:fixed;inset:0;z-index:var(--z-overlay);display:flex;align-items:flex-start;justify-content:center;padding-top:12vh}
   .cmdk-back{position:absolute;inset:0;background:rgba(0,0,0,.55);border:none;cursor:default;backdrop-filter:blur(2px)}
   .cmdk-panel{position:relative;z-index:1;width:min(620px,92vw);max-height:70vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--rule);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
   .cmdk-in{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--rule)}

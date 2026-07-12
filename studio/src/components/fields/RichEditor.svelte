@@ -86,7 +86,7 @@
 
 <div class="rewrap">
   {#if focused && multiline}
-    <div class="retb" onmousedown={(e) => e.preventDefault()}>
+    <div class="retb" role="toolbar" tabindex="-1" aria-label="Formatting" onmousedown={(e) => e.preventDefault()}>
       <button type="button" onclick={() => exec('bold')} title="Bold (⌘B)"><b>B</b></button>
       <button type="button" onclick={() => exec('italic')} title="Italic (⌘I)"><i>I</i></button>
       <span class="tbsep"></span>
@@ -94,7 +94,7 @@
       <button type="button" onclick={() => exec('insertOrderedList')} title="Numbered list (⌘⇧7)">1.</button>
     </div>
   {/if}
-  <div class="ce" class:ml={multiline} contenteditable="true" bind:this={el}
+  <div class="ce" class:ml={multiline} contenteditable="true" role="textbox" aria-multiline="true" aria-label={placeholder || 'Text'} tabindex="0" bind:this={el}
        data-ph={placeholder} oninput={handleInput} onkeydown={keydown} onpaste={paste}
        onfocus={() => focused = true}
        onblur={() => { setTimeout(() => menu = null, 120); setTimeout(() => focused = false, 150); }}></div>
@@ -133,7 +133,7 @@
   .retb b,.retb i{font-size:.82rem;color:var(--ink)}
   .tbsep{width:1px;height:16px;background:var(--rule);margin:0 2px}
 
-  .xmenu{position:fixed;z-index:200;min-width:210px;max-width:280px;max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.5);padding:5px}
+  .xmenu{position:fixed;z-index:var(--z-overlay);min-width:210px;max-width:280px;max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.5);padding:5px}
   .xitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font:inherit;font-size:.9rem;background:none;border:none;border-radius:7px;padding:7px 9px;cursor:pointer;color:var(--ink)}
   .xitem.on{background:var(--panel-2)}
   .xic{color:var(--accent-soft);width:1.1em;text-align:center;flex:none}

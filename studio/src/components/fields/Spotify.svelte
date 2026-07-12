@@ -13,7 +13,7 @@
     if (items.some(x => x.type === p.type && x.id === p.id)){ err = 'That’s already added.'; url = ''; return; }
     items.push(p); url = ''; err = ''; markDirty();
   }
-  function del(i){ if (!confirmDelete(true, 'this embed')) return; items.splice(i, 1); markDirty(); }
+  async function del(i){ if (!(await confirmDelete(true, 'this embed'))) return; items.splice(i, 1); markDirty(); }
   function onkey(e){ if (e.key === 'Enter'){ e.preventDefault(); add(); } }
 </script>
 

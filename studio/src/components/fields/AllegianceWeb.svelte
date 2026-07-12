@@ -16,7 +16,7 @@
   const hasWeb = $derived(lieges.length || vassals.length || allies.length || rivals.length);
 
   function add(){ ties.push({ id: uid(), name: '', targetId: '', kind: 'vassal', note: '' }); markDirty(); }
-  function del(i){ const t = ties[i]; if (!confirmDelete(t.name || t.targetId, t.name ? '“' + t.name + '”' : 'this tie')) return; ties.splice(i, 1); markDirty(); }
+  async function del(i){ const t = ties[i]; if (!(await confirmDelete(t.name || t.targetId, t.name ? '“' + t.name + '”' : 'this tie'))) return; ties.splice(i, 1); markDirty(); }
   function onLink(t){ const o = others.find(x => x.id === t.targetId); if (o && !t.name) t.name = o.title; markDirty(); }
 </script>
 

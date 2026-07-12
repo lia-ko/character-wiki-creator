@@ -40,11 +40,11 @@
 <div class="appbar">
   <span class="brand"><span class="mk">✦</span> Wiki <span>Studio</span></span>
   <span class="crumbs">
-    <a onclick={openProjects}>World</a>
+    <button type="button" class="crumb-link" onclick={openProjects}>World</button>
     {#if app.view !== 'projects' && curProject()}
       <span class="sep">/</span>
       {#if app.view === 'project'}<b>{curProject().name}</b>
-      {:else}<a onclick={() => openProject(curProject().id)}>{curProject().name}</a>{/if}
+      {:else}<button type="button" class="crumb-link" onclick={() => openProject(curProject().id)}>{curProject().name}</button>{/if}
     {/if}
     {#if app.view === 'entry' && curEntry()}
       <span class="sep">/</span><b>{curEntry().title || 'Untitled'}</b>
@@ -64,12 +64,12 @@
 </div>
 
 <style>
-  .appbar{position:fixed;top:0;left:0;right:0;height:var(--appbar-h);z-index:100;display:flex;align-items:center;gap:14px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--rule);overflow-x:auto}
+  .appbar{position:fixed;top:0;left:0;right:0;height:var(--appbar-h);z-index:var(--z-appbar);display:flex;align-items:center;gap:14px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--rule);overflow-x:auto}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;white-space:nowrap}
   .brand .mk{color:var(--accent-soft);font-family:var(--head);font-size:1.1rem}
   .brand span{color:var(--accent)}
   .crumbs{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
-  .crumbs a{color:var(--muted);cursor:pointer}.crumbs a:hover{color:var(--ink)}
+  .crumb-link{font:inherit;letter-spacing:inherit;text-transform:inherit;background:none;border:none;padding:0;color:var(--muted);cursor:pointer}.crumb-link:hover{color:var(--ink)}
   .crumbs b{color:var(--ink);font-weight:400}
   .sep{opacity:.5}
   .grow{flex:1}

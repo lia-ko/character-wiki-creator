@@ -27,7 +27,7 @@
           <div class="tksub">{trash.length} deleted {trash.length === 1 ? 'item' : 'items'} · restorable</div>
         </div>
         <span class="grow"></span>
-        {#if trash.length}<button class="tkempty" onclick={emptyTrash}>Empty trash</button>{/if}
+        {#if trash.length}<button class="tkempty btn-ghost" onclick={emptyTrash}>Empty trash</button>{/if}
         <button class="tkx" onclick={closeTrash} aria-label="close">✕</button>
       </div>
       <div class="tklist">
@@ -39,7 +39,7 @@
                 <div class="tknm">{nameOf(t)}</div>
                 <div class="tkmeta">{metaOf(t)}</div>
               </div>
-              <button class="tkrestore" onclick={() => restoreTrash(i)}>Restore</button>
+              <button class="tkrestore btn-primary" onclick={() => restoreTrash(i)}>Restore</button>
               <button class="tkdel" onclick={() => deleteForever(i)} title="delete forever">✕</button>
             </div>
           {/each}
@@ -52,15 +52,14 @@
 {/if}
 
 <style>
-  .tk{position:fixed;inset:0;z-index:210;display:flex;align-items:flex-start;justify-content:center;padding-top:10vh}
+  .tk{position:fixed;inset:0;z-index:var(--z-panel);display:flex;align-items:flex-start;justify-content:center;padding-top:10vh}
   .tkback{position:absolute;inset:0;background:rgba(0,0,0,.55);border:none;cursor:default;backdrop-filter:blur(2px)}
   .tkpanel{position:relative;z-index:1;width:min(560px,92vw);max-height:74vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--rule);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden}
   .tkhead{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--rule)}
   .tkhead h2{font-family:var(--head);font-weight:400;font-size:1.4rem;color:var(--ink);margin:0}
   .tksub{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:4px}
   .grow{flex:1}
-  .tkempty{font:inherit;font-size:.74rem;background:none;color:var(--muted);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
-  .tkempty:hover{border-color:var(--accent);color:var(--ink)}
+  .tkempty{font:inherit;font-size:.74rem;border-radius:7px;padding:6px 11px}
   .tkx{background:none;border:none;color:var(--faint);font-size:1rem;cursor:pointer;padding:4px 6px}
   .tkx:hover{color:var(--ink)}
   .tklist{overflow-y:auto;padding:8px}
@@ -70,8 +69,7 @@
   .tkmid{flex:1;min-width:0}
   .tknm{font-family:var(--head);font-size:1.05rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tkmeta{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:3px}
-  .tkrestore{font:inherit;font-size:.76rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 13px;cursor:pointer;flex:none}
-  .tkrestore:hover{opacity:.92}
+  .tkrestore{font:inherit;font-size:.76rem;border-radius:7px;padding:6px 13px;flex:none}
   .tkdel{background:none;border:none;color:var(--faint);cursor:pointer;font-size:.85rem;padding:4px 7px;border-radius:6px;flex:none}
   .tkdel:hover{color:#fff;background:var(--accent)}
   .tkzero{padding:34px 20px;text-align:center;color:var(--faint);font-style:italic;font-size:.9rem}

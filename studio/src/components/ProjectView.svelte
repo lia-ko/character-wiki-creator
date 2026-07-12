@@ -1,5 +1,5 @@
 <script>
-  import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow, toast, undo } from '../lib/store.svelte.js';
+  import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow, toast, undo, confirmModal } from '../lib/store.svelte.js';
   import { coverOf, entriesByType } from '../lib/model.js';
   import { ENTRY_TYPES, FAMILIES, templateFor } from '../lib/templates.js';
   import ThemeBar from './ThemeBar.svelte';
@@ -78,7 +78,7 @@
     saveNow();
   }
 
-  function del(e, id){ e.stopPropagation(); const entry = (p.entries || []).find(x => x.id === id); deleteEntry(id); toast(`Moved “${entry?.title || 'entry'}” to trash`, { actionLabel: 'Undo', action: undo }); }
+  async function del(e, id){ e.stopPropagation(); const entry = (p.entries || []).find(x => x.id === id); if (!(await confirmModal(`Delete “${entry?.title || 'this entry'}”?`))) return; deleteEntry(id); toast(`Moved “${entry?.title || 'entry'}” to trash`, { actionLabel: 'Undo', action: undo }); }
 </script>
 
 <div class="wrap">
@@ -150,7 +150,10 @@
           <div class="grid">
             {#each cl.items as e, ei (e.id)}
               {@const cover = coverOf(e)}
-              <div class="card" class:sel={selecting && selected[e.id]} onclick={() => selecting ? toggleSel(e.id) : openEntry(e.id)}>
+              <div class="card" class:sel={selecting && selected[e.id]} role="button" tabindex="0"
+                   aria-label={e.title || 'Untitled'}
+                   onclick={() => selecting ? toggleSel(e.id) : openEntry(e.id)}
+                   onkeydown={(ev) => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); selecting ? toggleSel(e.id) : openEntry(e.id); } }}>
                 {#if selecting}
                   <span class="selck" class:on={selected[e.id]}>{selected[e.id] ? '✓' : ''}</span>
                 {:else}
@@ -235,6 +238,7 @@
   .card{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
   .card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 14px 32px rgba(0,0,0,.4)}
   .card.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+  .card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .selck{position:absolute;top:9px;left:9px;z-index:3;width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;line-height:1}
   .selck.on{background:var(--accent);border-color:var(--accent)}
   .portrait{aspect-ratio:3/4;background:var(--panel-2) center/cover;position:relative;display:flex;align-items:center;justify-content:center}

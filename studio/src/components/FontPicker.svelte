@@ -40,7 +40,7 @@
   .fptrig:hover{border-color:var(--accent)}
   .fpname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .fpcar{font-size:.6rem;color:var(--faint);flex:none}
-  .fpmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:50;width:250px;max-height:min(64vh,440px);overflow:auto;padding:6px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  .fpmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:var(--z-dropdown);width:250px;max-height:min(64vh,440px);overflow:auto;padding:6px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
   .fpsec{font-family:var(--mono);font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);padding:10px 10px 4px}
   .fopt{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;font-size:1.05rem;background:none;border:none;border-radius:7px;padding:8px 12px;cursor:pointer;color:var(--ink);line-height:1.15}
   .fopt:hover{background:var(--panel-2)}

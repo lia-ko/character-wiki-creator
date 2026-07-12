@@ -67,7 +67,7 @@
   .ppsw i{flex:1}
   .ppname{white-space:nowrap}
   .ppcar{font-size:.6rem;color:var(--faint)}
-  .ppmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:50;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(320px,86vw);max-height:min(60vh,430px);overflow:auto;padding:10px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  .ppmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:var(--z-dropdown);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(320px,86vw);max-height:min(60vh,430px);overflow:auto;padding:10px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
   .pt{display:flex;flex-direction:column;gap:5px;padding:5px;background:none;border:1px solid transparent;border-radius:8px;cursor:pointer}
   .pt:hover{border-color:var(--rule);background:var(--panel-2)}
   .pt.on{border-color:var(--accent)}

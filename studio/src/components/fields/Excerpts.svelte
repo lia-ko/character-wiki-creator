@@ -8,7 +8,7 @@
   let open = $state({ 0: true });
   function toggle(i){ open[i] = !open[i]; }
   function add(){ list.push({ title: 'Excerpt', body: '', source: '' }); open[list.length - 1] = true; markDirty(); }
-  function del(i){ const e = list[i]; const has = (e.body && e.body.trim()) || e.source || (e.title && e.title !== 'Excerpt'); if (!confirmDelete(has, e.title ? '“' + e.title + '”' : 'this excerpt')) return; list.splice(i, 1); markDirty(); }
+  async function del(i){ const e = list[i]; const has = (e.body && e.body.trim()) || e.source || (e.title && e.title !== 'Excerpt'); if (!(await confirmDelete(has, e.title ? '“' + e.title + '”' : 'this excerpt'))) return; list.splice(i, 1); markDirty(); }
   function setBody(i, v){ list[i].body = v; markDirty(); }
 </script>
 

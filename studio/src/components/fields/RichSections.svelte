@@ -5,7 +5,7 @@
   let { entry, sec } = $props();
   const list = $derived(entry.data[sec.key]);
   function add(){ list.push({ h: 'Section', body: '' }); markDirty(); }
-  function del(i){ const s = list[i]; const has = (s.body && s.body.trim()) || (s.h && s.h !== 'Section'); if (!confirmDelete(has, s.h ? '“' + s.h + '”' : 'this section')) return; list.splice(i, 1); markDirty(); }
+  async function del(i){ const s = list[i]; const has = (s.body && s.body.trim()) || (s.h && s.h !== 'Section'); if (!(await confirmDelete(has, s.h ? '“' + s.h + '”' : 'this section'))) return; list.splice(i, 1); markDirty(); }
   function setBody(i, v){ list[i].body = v; markDirty(); }
 </script>
 

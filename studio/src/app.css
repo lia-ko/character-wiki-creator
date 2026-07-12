@@ -1,5 +1,24 @@
-:root{--appbar-h:52px}
+:root{
+  --appbar-h:52px;
+  /* z-index scale — the app's overlay stacking order, defined in one place */
+  --z-sticky:50;      /* sticky sub-bars (entry char-bar) */
+  --z-dropdown:90;    /* in-content dropdowns (New entry, theme, font pickers) */
+  --z-appbar:100;     /* fixed top bar */
+  --z-float:120;      /* floating action bar (multi-select) */
+  --z-overlay:200;    /* command palette, rich-text autocomplete */
+  --z-panel:210;      /* trash side-panel */
+  --z-modal:220;      /* confirm dialog */
+  --z-toast:300;      /* toasts — above everything */
+}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100vh}
 body{background:var(--bg,#15171c);color:var(--ink,#dfe3ea);font-family:var(--sans,system-ui,'Helvetica Neue',Arial,sans-serif);font-size:14px;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
+
+/* shared button intents — components add their own sizing (font-size/padding/radius);
+   these centralize the accent/hover/disabled behavior that was duplicated ~10×. */
+.btn-primary{background:var(--accent);color:#fff;border:none;cursor:pointer;font-weight:600}
+.btn-primary:hover{opacity:.92}
+.btn-primary:disabled{opacity:.5;cursor:default}
+.btn-ghost{background:none;color:var(--muted);border:1px solid var(--rule);cursor:pointer}
+.btn-ghost:hover{border-color:var(--accent);color:var(--ink)}

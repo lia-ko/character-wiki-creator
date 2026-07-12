@@ -4,7 +4,7 @@
   let { entry, sec } = $props();
   const rows = $derived(entry.data[sec.key]);
   function add(){ rows.push({ k: 'Field', v: '' }); markDirty(); }
-  function del(i){ const r = rows[i]; if (!confirmDelete(r.v, r.k ? '“' + r.k + '”' : 'this field')) return; rows.splice(i, 1); markDirty(); }
+  async function del(i){ const r = rows[i]; if (!(await confirmDelete(r.v, r.k ? '“' + r.k + '”' : 'this field'))) return; rows.splice(i, 1); markDirty(); }
 </script>
 
 <div class="stats">

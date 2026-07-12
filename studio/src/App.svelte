@@ -30,6 +30,7 @@
   import CommandPalette from './components/CommandPalette.svelte';
   import TrashPanel from './components/TrashPanel.svelte';
   import Toast from './components/Toast.svelte';
+  import ConfirmDialog from './components/ConfirmDialog.svelte';
 
   // Load every font face once (editor preview needs them all available).
   const faceCSS = fontFaceCSS('/fonts/');
@@ -50,6 +51,7 @@
 <CommandPalette />
 <TrashPanel />
 <Toast />
+<ConfirmDialog />
 
 <div class="stage">
   {#if app.view === 'projects'}

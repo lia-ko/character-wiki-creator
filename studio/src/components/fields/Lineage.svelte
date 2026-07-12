@@ -17,10 +17,10 @@
 
   function addRoot(){ nodes.push({ id: uid(), name: '', targetId: '', parentId: null, partners: [] }); markDirty(); }
   function addChild(pid){ nodes.push({ id: uid(), name: '', targetId: '', parentId: pid, partners: [] }); markDirty(); }
-  function del(id){
+  async function del(id){
     const node = nodes.find(n => n.id === id); if (!node) return;
     const has = node.name || kidsOf(id).length || (node.partners && node.partners.length);
-    if (!confirmDelete(has, node.name ? '“' + node.name + '”' : 'this person')) return;
+    if (!(await confirmDelete(has, node.name ? '“' + node.name + '”' : 'this person'))) return;
     nodes.forEach(n => { if (n.parentId === id) n.parentId = node.parentId || null; }); // reparent orphans
     nodes.splice(nodes.findIndex(n => n.id === id), 1); markDirty();
   }

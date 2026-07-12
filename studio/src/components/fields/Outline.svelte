@@ -8,11 +8,11 @@
   function titleOf(id){ const o = others.find(x => x.id === id); return o ? (o.title || 'Untitled') : '⚠ missing'; }
 
   function addAct(){ outline.acts.push({ id: uid(), title: 'New act', chapters: [] }); markDirty(); }
-  function delAct(ai){ const a = outline.acts[ai]; const has = (a.chapters && a.chapters.length) || (a.title && a.title !== 'New act'); if (!confirmDelete(has, a.title ? '“' + a.title + '” and its chapters' : 'this act')) return; outline.acts.splice(ai, 1); markDirty(); }
+  async function delAct(ai){ const a = outline.acts[ai]; const has = (a.chapters && a.chapters.length) || (a.title && a.title !== 'New act'); if (!(await confirmDelete(has, a.title ? '“' + a.title + '” and its chapters' : 'this act'))) return; outline.acts.splice(ai, 1); markDirty(); }
   function addChapter(ai){ outline.acts[ai].chapters.push({ id: uid(), title: 'New chapter', beats: [] }); markDirty(); }
-  function delChapter(ai, ci){ const ch = outline.acts[ai].chapters[ci]; const has = (ch.beats && ch.beats.length) || (ch.title && ch.title !== 'New chapter'); if (!confirmDelete(has, ch.title ? '“' + ch.title + '” and its beats' : 'this chapter')) return; outline.acts[ai].chapters.splice(ci, 1); markDirty(); }
+  async function delChapter(ai, ci){ const ch = outline.acts[ai].chapters[ci]; const has = (ch.beats && ch.beats.length) || (ch.title && ch.title !== 'New chapter'); if (!(await confirmDelete(has, ch.title ? '“' + ch.title + '” and its beats' : 'this chapter'))) return; outline.acts[ai].chapters.splice(ci, 1); markDirty(); }
   function addBeat(ai, ci){ outline.acts[ai].chapters[ci].beats.push({ id: uid(), text: '', links: [] }); markDirty(); }
-  function delBeat(ai, ci, bi){ const bt = outline.acts[ai].chapters[ci].beats[bi]; if (!confirmDelete(bt.text || (bt.links && bt.links.length), 'this beat')) return; outline.acts[ai].chapters[ci].beats.splice(bi, 1); markDirty(); }
+  async function delBeat(ai, ci, bi){ const bt = outline.acts[ai].chapters[ci].beats[bi]; if (!(await confirmDelete(bt.text || (bt.links && bt.links.length), 'this beat'))) return; outline.acts[ai].chapters[ci].beats.splice(bi, 1); markDirty(); }
   function addLink(beat, id){ if (id && !beat.links.includes(id)){ beat.links.push(id); markDirty(); } }
   function delLink(beat, id){ beat.links = beat.links.filter(x => x !== id); markDirty(); }
 </script>

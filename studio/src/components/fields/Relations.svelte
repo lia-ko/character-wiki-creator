@@ -12,7 +12,7 @@
   let open = $state({ 0: true });
   function toggle(i){ open[i] = !open[i]; }
   function add(){ list.push({ name: 'New relation', role: '', status: '', targetId: '', img: '', body: '' }); open[list.length - 1] = true; markDirty(); }
-  function del(i){ const r = list[i]; const named = r.name && r.name !== 'New relation'; const has = named || r.body || r.role || r.status || r.img; if (!confirmDelete(has, named ? '“' + r.name + '”' : 'this entry')) return; list.splice(i, 1); markDirty(); }
+  async function del(i){ const r = list[i]; const named = r.name && r.name !== 'New relation'; const has = named || r.body || r.role || r.status || r.img; if (!(await confirmDelete(has, named ? '“' + r.name + '”' : 'this entry'))) return; list.splice(i, 1); markDirty(); }
   function setBody(i, v){ list[i].body = v; markDirty(); }
   async function setImg(i){ const u = await pickImages(false); if (u && u[0]){ list[i].img = u[0]; markDirty(); } }
 </script>

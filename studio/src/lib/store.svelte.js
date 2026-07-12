@@ -14,7 +14,20 @@ export const app = $state({
   histIndex: 0,       // mirrored from the (non-reactive) history stack for UI enable/disable
   histLen: 1,
   toast: null,        // { msg, actionLabel, action, id }
+  confirm: null,      // { message, confirmLabel, danger } while a confirm dialog is open
 });
+
+/* ---- in-app confirm dialog (promise-based; replaces native confirm()) ---- */
+let confirmResolve = null;
+export function confirmModal(message, opts = {}){
+  return new Promise(resolve => {
+    confirmResolve = resolve;
+    app.confirm = { message, confirmLabel: opts.confirmLabel || 'Delete', danger: opts.danger !== false };
+  });
+}
+function settleConfirm(v){ app.confirm = null; const r = confirmResolve; confirmResolve = null; r?.(v); }
+export function confirmYes(){ settleConfirm(true); }
+export function confirmNo(){ settleConfirm(false); }
 
 /* ---- toast (non-blocking notice, optional action e.g. Undo) ---- */
 let toastTimer = null, toastSeq = 0;
@@ -121,9 +134,11 @@ export function emptyTrash(){ if (app.ws.trash?.length){ app.ws.trash = []; mark
 export function markDirty(){ app.dirty = true; scheduleSave(); scheduleHistory(); }
 export function clearDirty(){ app.dirty = false; }
 
-// Deletions are now reversible (⌘Z undo + trash), so we no longer block on a native confirm();
-// callers proceed immediately. Kept for signature compatibility across the field components.
-export function confirmDelete(){ return true; }
+// Async confirm for deleting a sub-item — prompts (via the in-app dialog) only when the item
+// actually holds content; blank items delete silently. Returns Promise<boolean>.
+export function confirmDelete(hasContent, what){
+  return hasContent ? confirmModal('Delete ' + what + '?') : Promise.resolve(true);
+}
 
 /* ---- navigation ---- */
 export function openProjects(){ app.view = 'projects'; }

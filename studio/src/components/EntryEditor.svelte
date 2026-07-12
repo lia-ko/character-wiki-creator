@@ -59,7 +59,7 @@
     <datalist id="entry-groups">{#each groupOptions as g}<option value={g}></option>{/each}</datalist>
     <span class="grow"></span>
     <button class="expbtn" onclick={exportSheet} disabled={exporting}>{exporting ? 'Exporting…' : 'Export ↓'}</button>
-    <button class="pvbtn" onclick={previewEntry}>Preview ↗</button>
+    <button class="pvbtn btn-primary" onclick={previewEntry}>Preview ↗</button>
   </div>
 
   {#key entry.id}
@@ -149,7 +149,7 @@
 {/if}
 
 <style>
-  .charbar{position:sticky;top:var(--appbar-h);z-index:50;display:flex;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--rule);background:var(--panel);flex-wrap:wrap}
+  .charbar{position:sticky;top:var(--appbar-h);z-index:var(--z-sticky);display:flex;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--rule);background:var(--panel);flex-wrap:wrap}
   .charbar button{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .charbar button:hover{border-color:var(--accent)}
   .cbt{font-family:var(--head);font-size:1.1rem;color:var(--ink)}
@@ -160,8 +160,7 @@
   .grpin{font:inherit;font-size:.74rem;background:none;border:none;outline:none;color:var(--ink);width:9em;field-sizing:content;min-width:5em}
   .grpin::placeholder{color:var(--faint)}
   .grow{flex:1}
-  .pvbtn{font:inherit;font-size:.74rem;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 13px;cursor:pointer;font-weight:600}
-  .pvbtn:hover{opacity:.92}
+  .pvbtn{font:inherit;font-size:.74rem;border-radius:7px;padding:6px 13px}
   .expbtn{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .expbtn:hover{border-color:var(--accent)}
   .expbtn:disabled{opacity:.6;cursor:default}
