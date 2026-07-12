@@ -142,7 +142,6 @@ export function confirmDelete(hasContent, what){
 
 /* ---- navigation ---- */
 export function openProjects(){ app.view = 'projects'; }
-export function openMapLab(){ app.view = 'maplab'; }
 export function openProject(id){ app.projectId = id; app.view = 'project'; }
 export function openEntry(id){ app.entryId = id; app.view = 'entry'; app.mode = 'edit'; }
 export function openAnyEntry(id){ for (const p of app.ws.projects){ if (p.entries.some(e => e.id === id)){ app.projectId = p.id; app.entryId = id; app.view = 'entry'; app.mode = 'edit'; return; } } }

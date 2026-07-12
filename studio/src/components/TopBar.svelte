@@ -1,11 +1,13 @@
 <script>
-  import { app, curProject, curEntry, openProjects, openProject, openMapLab, openSearch, openTrash, undo, redo, clearDirty, markDirty, saveNow, toast } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProjects, openProject, openSearch, openTrash, undo, redo, clearDirty, markDirty, saveNow, toast } from '../lib/store.svelte.js';
   import { slugify, migrateWorkspace } from '../lib/model.js';
   import { buildWorkspace } from '../lib/build.js';
   import { download } from '../lib/download.js';
+  import { dismissable } from '../lib/dismissable.js';
 
   let fileInput;
   let exporting = $state(false);
+  let moreOpen = $state(false);
 
   async function exportZip(){
     if (exporting) return; exporting = true;
@@ -38,7 +40,7 @@
 </script>
 
 <div class="appbar">
-  <span class="brand"><span class="mk">✦</span> Wiki <span>Studio</span></span>
+  <span class="brand"><span class="mk">✦</span><span class="bname"> Wiki <span class="accent">Studio</span></span></span>
   <span class="crumbs">
     <button type="button" class="crumb-link" onclick={openProjects}>World</button>
     {#if app.view !== 'projects' && curProject()}
@@ -51,24 +53,33 @@
     {/if}
   </span>
   <span class="grow"></span>
-  <button class="search" onclick={openSearch} title="Search (⌘K)"><span class="si">⌕</span> Search <kbd>⌘K</kbd></button>
+  <button class="search" onclick={openSearch} title="Search (⌘K)"><span class="si">⌕</span><span class="slabel"> Search </span><kbd>⌘K</kbd></button>
   {#if app.dirty}<span class="unsaved"><span class="u"></span> unsaved</span>{/if}
   <button class="abtn ico" onclick={undo} disabled={app.histIndex <= 0} title="Undo (⌘Z)">↶</button>
   <button class="abtn ico" onclick={redo} disabled={app.histIndex >= app.histLen - 1} title="Redo (⌘⇧Z)">↷</button>
   <button class="abtn" onclick={openTrash} title="Trash — restore deleted entries">Trash{#if app.ws.trash?.length} <span class="tcount">{app.ws.trash.length}</span>{/if}</button>
-  <button class="abtn" class:on={app.view === 'maplab'} onclick={openMapLab}>⬡ Map Lab</button>
-  <button class="abtn" onclick={() => fileInput.click()}>Open</button>
-  <button class="abtn" onclick={saveJson}>Save</button>
+  <button class="abtn wideact" onclick={() => fileInput.click()}>Open</button>
+  <button class="abtn wideact" onclick={saveJson}>Save</button>
+  <div class="morewrap narrowact" use:dismissable={() => moreOpen = false}>
+    <button class="abtn ico" class:on={moreOpen} onclick={() => moreOpen = !moreOpen} title="More" aria-expanded={moreOpen}>⋯</button>
+    {#if moreOpen}
+      <div class="moremenu">
+        <button class="moreitem" onclick={() => { moreOpen = false; fileInput.click(); }}>Open workspace…</button>
+        <button class="moreitem" onclick={() => { moreOpen = false; saveJson(); }}>Save workspace</button>
+      </div>
+    {/if}
+  </div>
   <button class="abtn primary" onclick={exportZip} disabled={exporting}>{exporting ? 'Exporting…' : 'Export .zip'}</button>
   <input type="file" accept=".json,application/json" bind:this={fileInput} onchange={openJson} style="display:none" />
 </div>
 
 <style>
-  .appbar{position:fixed;top:0;left:0;right:0;height:var(--appbar-h);z-index:var(--z-appbar);display:flex;align-items:center;gap:14px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--rule);overflow-x:auto}
+  .appbar{position:fixed;top:0;left:0;right:0;height:var(--appbar-h);z-index:var(--z-appbar);display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--rule)}
   .brand{display:flex;align-items:center;gap:9px;font-weight:700;white-space:nowrap}
   .brand .mk{color:var(--accent-soft);font-family:var(--head);font-size:1.1rem}
-  .brand span{color:var(--accent)}
-  .crumbs{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+  .brand .accent{color:var(--accent)}
+  .crumbs{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);white-space:nowrap;min-width:0;flex-shrink:1;overflow:hidden}
+  .crumbs b{display:inline-block;max-width:32vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
   .crumb-link{font:inherit;letter-spacing:inherit;text-transform:inherit;background:none;border:none;padding:0;color:var(--muted);cursor:pointer}.crumb-link:hover{color:var(--ink)}
   .crumbs b{color:var(--ink);font-weight:400}
   .sep{opacity:.5}
@@ -87,4 +98,23 @@
   .abtn:disabled{opacity:.4;cursor:default}
   .abtn:disabled:hover{border-color:var(--rule)}
   .tcount{font-family:var(--mono);font-size:.6rem;color:var(--accent-soft)}
+  /* responsive overflow: file actions inline when there's room, collapse into ⋯ when tight */
+  .narrowact{display:none}
+  @media(max-width:1100px){ .wideact{display:none} .narrowact{display:block} }
+  .morewrap{position:relative;flex:none}
+  .moremenu{position:absolute;top:calc(100% + 6px);right:0;z-index:var(--z-dropdown);min-width:190px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:2px}
+  .moreitem{font:inherit;font-size:.8rem;text-align:left;background:none;border:none;border-radius:7px;padding:8px 11px;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .moreitem:hover{background:var(--panel-2)}
+
+  /* compact top bar on small screens (still horizontally scrollable as a fallback) */
+  @media(max-width:720px){
+    .appbar{gap:7px;padding:0 10px}
+    .bname{display:none}
+    .crumbs{display:none}
+    .search .slabel,.search kbd{display:none}
+    .search{padding:6px 9px}
+    .unsaved{display:none}
+    .abtn{padding:6px 9px;font-size:.72rem}
+    .abtn.ico{padding:6px 8px}
+  }
 </style>

@@ -202,7 +202,16 @@
 
   @media(max-width:820px){
     .wsplit{grid-template-columns:1fr;gap:20px}
-    .wsplit .media{position:static}
+    /* single column: cap the portrait so it doesn't balloon to full-width (3:4 gets huge) */
+    .wsplit .media{position:static;max-width:min(calc(300px * var(--ps,1)), 78vw);margin:0 auto}
     .wbody{grid-template-columns:1fr;gap:8px}
+  }
+  @media(max-width:640px){
+    .charbar{padding:8px 12px;gap:8px}
+    .wsplit{padding:20px 14px 70px}
+    .whero{padding:20px 14px 70px}
+    .wbody{padding:0 14px}
+    .wrap-narrow{padding:20px 14px 70px}
+    .backrefs{padding:8px 14px 70px}
   }
 </style>

@@ -47,12 +47,15 @@
 
 <style>
   .wrap{max-width:1180px;margin:0 auto;padding:40px 26px 90px}
+  @media(min-width:1700px){ .wrap{max-width:1460px} }
+  @media(max-width:640px){ .wrap{padding:24px 14px 70px} }
   .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--rule)}
   .eyebrow{font-family:var(--mono);font-size:.64rem;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
   .htitle{font-family:var(--head);font-weight:400;font-size:calc(clamp(2rem,5vw,3.2rem)*var(--hs,1));line-height:1;margin:0;color:var(--ink);background:none;border:none;outline:none;width:100%;max-width:640px}
   .htitle:focus{border-bottom:1px solid var(--rule)}
   .count{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:11px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  @media(max-width:640px){ .grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px} .newcard{min-height:150px} }
   .pcard{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s;display:flex;flex-direction:column}
   .pcard:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 16px 36px rgba(0,0,0,.5)}
   .pcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

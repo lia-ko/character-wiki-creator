@@ -195,6 +195,8 @@
 
 <style>
   .wrap{max-width:1180px;margin:0 auto;padding:40px 26px 90px}
+  @media(min-width:1700px){ .wrap{max-width:1460px} }
+  @media(max-width:640px){ .wrap{padding:24px 14px 70px} }
   .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--rule)}
   .hleft{display:flex;align-items:stretch;gap:20px;min-width:0}
   .covwrap{position:relative;flex:none}
@@ -234,6 +236,12 @@
   .chev{color:var(--accent-soft);font-size:.7rem;width:.9em;flex:none;display:inline-block}
   .gcount{color:var(--faint);font-size:.6rem;letter-spacing:.1em}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+  @media(max-width:640px){
+    .hleft{flex-direction:column;align-items:stretch;gap:14px}
+    .covpick{width:100%;max-width:200px;height:auto;aspect-ratio:16/10;min-height:0}
+    .htitle{width:100%}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  }
   .grid + .grouphd{margin-top:24px}
   .card{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
   .card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 14px 32px rgba(0,0,0,.4)}

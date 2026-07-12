@@ -26,7 +26,6 @@
   import ProjectsView from './components/ProjectsView.svelte';
   import ProjectView from './components/ProjectView.svelte';
   import EntryEditor from './components/EntryEditor.svelte';
-  import MapLab from './components/MapLab.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import TrashPanel from './components/TrashPanel.svelte';
   import Toast from './components/Toast.svelte';
@@ -58,8 +57,6 @@
     <ProjectsView />
   {:else if app.view === 'project'}
     <ProjectView />
-  {:else if app.view === 'maplab'}
-    <MapLab />
   {:else}
     <EntryEditor />
   {/if}
