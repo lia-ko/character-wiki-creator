@@ -125,8 +125,6 @@ export const READER_CSS = [
 ".phero{position:relative;aspect-ratio:4/3;background:var(--panel-2) center/cover;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--rule)}",
 ".phero::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.5))}",
 ".pini{font-family:var(--head);font-size:3.4rem;color:var(--line);text-transform:uppercase}",
-".pstack{position:absolute;top:10px;left:12px;z-index:2;display:flex}",
-".pst{width:34px;height:34px;border-radius:6px;background:var(--panel-2) center/cover;border:2px solid var(--panel);margin-left:-12px;box-shadow:0 2px 6px rgba(0,0,0,.4)}.pst:first-child{margin-left:0}",
 ".pcard .pbody{padding:15px 17px 17px}.pcard .pt{font-family:var(--head);font-size:calc(1.5rem*var(--hs,1));line-height:1.08;color:var(--ink)}",
 ".pcard .pmeta{font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-soft);margin-top:8px}",
 
