@@ -2,6 +2,18 @@
   import { curProject, curEntry, openProject, markDirty } from '../lib/store.svelte.js';
   import { templateFor } from '../lib/templates.js';
   import { coverOf } from '../lib/model.js';
+  import { renderEntry, docShell } from '../lib/render.js';
+  import { projectEvents } from '../lib/build.js';
+
+  function previewEntry(){
+    const p = curProject();
+    const coverMap = {}; p.entries.forEach(e => coverMap[e.id] = coverOf(e));
+    const ctx = { href: () => null, cover: (id) => coverMap[id] || null, events: projectEvents(p), hubHref: null, crumb: p.name };
+    const html = docShell({ title: entry.title || 'Entry', palette: p.palette, headFont: p.headFont, bodyFont: p.bodyFont, headScale: p.headScale, bodyScale: p.bodyScale, portraitScale: p.portraitScale, fontPrefix: location.origin + '/fonts/', bodyHTML: renderEntry(entry, ctx) });
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 6000);
+  }
   import Field from './fields/Field.svelte';
   import Gallery from './fields/Gallery.svelte';
   import Stats from './fields/Stats.svelte';
@@ -25,6 +37,7 @@
     <span class="cbt">{entry.title || 'Untitled'}</span>
     <span class="badge">{tpl.label}</span>
     <span class="grow"></span>
+    <button class="pvbtn" onclick={previewEntry}>Preview ↗</button>
   </div>
 
   {#key entry.id}
@@ -41,7 +54,7 @@
     {:else if layout === 'split'}
       <div class="wsplit">
         <div class="media">
-          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} />{/if}
+          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect={layout === 'split' ? '3/4' : '16/10'} />{/if}
         </div>
         <div class="col">
           <EntryTitle {entry} {tpl} />
@@ -58,7 +71,7 @@
       <div class="whero">
         {#if tpl.media === 'feature'}
           <EntryTitle {entry} {tpl} />
-          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} />{/if}
+          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect={layout === 'split' ? '3/4' : '16/10'} />{/if}
         {:else if tpl.media === 'sigil'}
           <div class="herohead">
             {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="sigil" />{/if}
@@ -103,6 +116,8 @@
   .cbt{font-family:var(--head);font-size:1.1rem;color:var(--ink)}
   .badge{font-family:var(--mono);font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-soft);border:1px solid var(--rule);border-radius:20px;padding:2px 9px}
   .grow{flex:1}
+  .pvbtn{font:inherit;font-size:.74rem;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:6px 13px;cursor:pointer;font-weight:600}
+  .pvbtn:hover{opacity:.92}
 
   /* shared section heading + details label */
   h2{font-family:var(--head);font-size:calc(1.5rem*var(--hs,1));font-weight:400;color:var(--ink);margin:20px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
@@ -112,7 +127,7 @@
   .wrap-narrow{max-width:760px;margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:10px}
 
   /* split (character, item) */
-  .wsplit{max-width:1160px;margin:0 auto;padding:28px 30px 90px;display:grid;grid-template-columns:minmax(260px,0.82fr) 1.4fr;gap:36px;align-items:start}
+  .wsplit{max-width:1160px;margin:0 auto;padding:28px 30px 90px;display:grid;grid-template-columns:minmax(180px,calc(340px * var(--ps,1))) 1fr;gap:36px;align-items:start}
   .wsplit .media{position:sticky;top:64px}
   .wsplit .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 

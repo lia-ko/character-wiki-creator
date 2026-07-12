@@ -1,6 +1,7 @@
 <script>
   import { markDirty } from '../../lib/store.svelte.js';
   import { uid } from '../../lib/model.js';
+  import Reorder from '../Reorder.svelte';
   let { entry, sec, others } = $props();
   const outline = $derived(entry.data[sec.key]);
 
@@ -21,12 +22,14 @@
     <div class="act">
       <div class="acthead">
         <input class="acttitle" bind:value={act.title} oninput={markDirty} placeholder="Act title" />
+        <Reorder list={outline.acts} i={ai} />
         <button class="delx" onclick={() => delAct(ai)} title="remove act">✕</button>
       </div>
       {#each act.chapters as ch, ci (ch.id)}
         <div class="chap">
           <div class="chaphead">
             <input class="chaptitle" bind:value={ch.title} oninput={markDirty} placeholder="Chapter title" />
+            <Reorder list={act.chapters} i={ci} />
             <button class="delx" onclick={() => delChapter(ai, ci)} title="remove chapter">✕</button>
           </div>
           {#each ch.beats as beat, bi (beat.id)}
@@ -46,6 +49,7 @@
                   {/if}
                 </div>
               </div>
+              <Reorder list={ch.beats} i={bi} />
               <button class="delx" onclick={() => delBeat(ai, ci, bi)} title="remove beat">✕</button>
             </div>
           {/each}
@@ -66,7 +70,7 @@
   .chap{border-left:2px solid var(--rule);margin:8px 0 8px 6px;padding:4px 0 4px 12px}
   .chaphead{display:flex;align-items:center;gap:8px}
   .chaptitle{flex:1;background:none;border:none;outline:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
-  .beat{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;padding:5px 0}
+  .beat{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:start;padding:5px 0}
   .dot{color:var(--accent-soft);line-height:1.8}
   .beatmain{min-width:0}
   .beattext{width:100%;background:none;border:none;outline:none;font-family:var(--body);font-size:calc(.95rem*var(--bs,1));color:var(--ink)}

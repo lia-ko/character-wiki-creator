@@ -1,5 +1,6 @@
 /* ============ REACTIVE APP STATE (Svelte 5 runes) ============ */
-import { createWorkspace, createProject, createEntry } from './model.js';
+import { createWorkspace, createProject, createEntry, migrateWorkspace } from './model.js';
+import { idbSet, idbGet } from './persist.js';
 
 export const app = $state({
   ws: createWorkspace(),
@@ -21,7 +22,24 @@ export function curEntry(){
   if (!p) return null;
   return p.entries.find(e => e.id === app.entryId) || null;
 }
-export function markDirty(){ app.dirty = true; }
+/* ---- local autosave (IndexedDB) so a refresh never loses work ---- */
+let saveTimer = null, restored = false;
+function scheduleSave(){
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { idbSet('workspace', $state.snapshot(app.ws)).catch(() => {}); }, 500);
+}
+export async function restoreWorkspace(){
+  try {
+    const saved = await idbGet('workspace');
+    if (saved && Array.isArray(saved.projects) && saved.projects.length){
+      app.ws = migrateWorkspace(saved); app.projectId = saved.projects[0].id; app.entryId = null; app.view = 'projects';
+    }
+  } catch (_) {}
+  restored = true;
+}
+export function saveNow(){ if (restored) idbSet('workspace', $state.snapshot(app.ws)).catch(() => {}); }
+
+export function markDirty(){ app.dirty = true; scheduleSave(); }
 export function clearDirty(){ app.dirty = false; }
 
 /* ---- navigation ---- */
@@ -65,7 +83,7 @@ export function themeFor(){
   const p = curProject();
   if (app.view === 'projects' || !p){
     const w = app.ws;
-    return { palette: w.palette, head: w.headFont, body: w.bodyFont, hs: w.headScale, bs: w.bodyScale };
+    return { palette: w.palette, head: w.headFont, body: w.bodyFont, hs: w.headScale, bs: w.bodyScale, ps: 1 };
   }
-  return { palette: p.palette, head: p.headFont, body: p.bodyFont, hs: p.headScale, bs: p.bodyScale };
+  return { palette: p.palette, head: p.headFont, body: p.bodyFont, hs: p.headScale, bs: p.bodyScale, ps: p.portraitScale || 1 };
 }

@@ -6,9 +6,11 @@ import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES } from './templates.
 
 // Normalize any renamed/aliased entry types in a loaded workspace (e.g. faction → organization).
 export function migrateWorkspace(ws){
-  (ws?.projects || []).forEach(p => (p.entries || []).forEach(e => {
-    if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
-  }));
+  (ws?.projects || []).forEach(p => {
+    if (p.portraitScale == null) p.portraitScale = 1;
+    if (p.cover == null) p.cover = '';
+    (p.entries || []).forEach(e => { if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type]; });
+  });
   return ws;
 }
 
@@ -35,7 +37,7 @@ export function createProject(name, genre){
   return {
     id: uid(), name: name || 'New project', genre: genre || '',
     palette: 'slate', headFont: 'playfair-display', bodyFont: 'eb-garamond',
-    headScale: 1, bodyScale: 1, entries: [],
+    headScale: 1, bodyScale: 1, portraitScale: 1, cover: '', entries: [],
   };
 }
 

@@ -1,8 +1,24 @@
 <script>
-  import { app, curProject, curEntry, openProjects, openProject, openMapLab, clearDirty, markDirty } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProjects, openProject, openMapLab, clearDirty, markDirty, saveNow } from '../lib/store.svelte.js';
   import { slugify, migrateWorkspace } from '../lib/model.js';
+  import { buildWorkspace } from '../lib/build.js';
 
   let fileInput;
+  let exporting = $state(false);
+
+  async function exportZip(){
+    if (exporting) return; exporting = true;
+    try {
+      const blob = await buildWorkspace(app.ws);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (slugify(app.ws.title) || 'world') + '-wiki.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      clearDirty();
+    } catch (e) { alert('Export failed: ' + (e && e.message || e)); }
+    exporting = false;
+  }
 
   function saveJson(){
     const blob = new Blob([JSON.stringify(app.ws)], { type: 'application/json' });
@@ -21,7 +37,7 @@
         if (data && Array.isArray(data.projects)){
           app.ws = migrateWorkspace(data);
           app.projectId = data.projects[0]?.id || null;
-          app.entryId = null; app.view = 'projects'; clearDirty();
+          app.entryId = null; app.view = 'projects'; clearDirty(); saveNow();
         } else alert('That does not look like a workspace file.');
       } catch (_) { alert('Could not read that file.'); }
     });
@@ -46,7 +62,8 @@
   {#if app.dirty}<span class="unsaved"><span class="u"></span> unsaved</span>{/if}
   <button class="abtn" class:on={app.view === 'maplab'} onclick={openMapLab}>⬡ Map Lab</button>
   <button class="abtn" onclick={() => fileInput.click()}>Open</button>
-  <button class="abtn primary" onclick={saveJson}>Save</button>
+  <button class="abtn" onclick={saveJson}>Save</button>
+  <button class="abtn primary" onclick={exportZip} disabled={exporting}>{exporting ? 'Exporting…' : 'Export .zip'}</button>
   <input type="file" accept=".json,application/json" bind:this={fileInput} onchange={openJson} style="display:none" />
 </div>
 

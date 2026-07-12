@@ -1,7 +1,7 @@
 <script>
   import { PALETTES, FACES, SIZES } from '../lib/theme.js';
   import { markDirty } from '../lib/store.svelte.js';
-  let { target } = $props();
+  let { target, showPortrait = false } = $props();
   const onchange = () => markDirty();
 </script>
 
@@ -27,6 +27,13 @@
       {#each SIZES as s}<option value={s.v}>{s.l}</option>{/each}
     </select>
   </label>
+  {#if showPortrait}
+    <label>Portrait
+      <select bind:value={target.portraitScale} {onchange}>
+        {#each SIZES as s}<option value={s.v}>{s.l}</option>{/each}
+      </select>
+    </label>
+  {/if}
 </div>
 
 <style>

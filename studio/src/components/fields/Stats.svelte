@@ -1,5 +1,6 @@
 <script>
   import { markDirty } from '../../lib/store.svelte.js';
+  import Reorder from '../Reorder.svelte';
   let { entry, sec } = $props();
   const rows = $derived(entry.data[sec.key]);
   function add(){ rows.push({ k: 'Field', v: '' }); markDirty(); }
@@ -11,6 +12,7 @@
     <div class="srow">
       <input class="k" bind:value={row.k} oninput={markDirty} placeholder="label" />
       <input class="v" bind:value={row.v} oninput={markDirty} placeholder="—" />
+      <Reorder list={rows} {i} />
       <button class="delx" onclick={() => del(i)} title="remove">✕</button>
     </div>
   {/each}
@@ -19,7 +21,7 @@
 
 <style>
   .stats{border:1px solid var(--rule);border-radius:8px;overflow:hidden}
-  .srow{display:grid;grid-template-columns:40% 1fr auto;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
+  .srow{display:grid;grid-template-columns:40% 1fr auto auto;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
   input{background:none;border:none;outline:none;color:var(--ink);font:inherit}
   .k{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
   .v{font-size:.82rem;color:var(--muted)}

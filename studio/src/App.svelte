@@ -1,6 +1,15 @@
 <script>
-  import { app, themeFor } from './lib/store.svelte.js';
+  import { onMount } from 'svelte';
+  import { app, themeFor, restoreWorkspace, saveNow } from './lib/store.svelte.js';
   import { paletteVars, palById, fontVars, fontFaceCSS } from './lib/theme.js';
+
+  onMount(() => {
+    restoreWorkspace();
+    const flush = () => saveNow();
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
+    return () => window.removeEventListener('beforeunload', flush);
+  });
   import TopBar from './components/TopBar.svelte';
   import ProjectsView from './components/ProjectsView.svelte';
   import ProjectView from './components/ProjectView.svelte';
@@ -13,7 +22,7 @@
   // Reactive palette + font variables for the current view.
   const themeCSS = $derived.by(() => {
     const t = themeFor();
-    return paletteVars(palById(t.palette)) + fontVars(t.head, t.body, t.hs, t.bs);
+    return paletteVars(palById(t.palette)) + fontVars(t.head, t.body, t.hs, t.bs, t.ps);
   });
 </script>
 

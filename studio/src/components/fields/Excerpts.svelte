@@ -1,6 +1,7 @@
 <script>
   import { markDirty } from '../../lib/store.svelte.js';
   import RichEditor from './RichEditor.svelte';
+  import Reorder from '../Reorder.svelte';
   let { entry, sec } = $props();
   const list = $derived(entry.data[sec.key]);
   function add(){ list.push({ title: 'Excerpt', body: '', source: '' }); markDirty(); }
@@ -13,6 +14,7 @@
     <div class="exc">
       <div class="head">
         <input class="t" bind:value={e.title} oninput={markDirty} placeholder="Title" />
+        <Reorder list={list} {i} />
         <button class="delx" onclick={() => del(i)} title="remove">✕</button>
       </div>
       <RichEditor value={e.body} multiline placeholder="Passage…" oninput={(v) => setBody(i, v)} />

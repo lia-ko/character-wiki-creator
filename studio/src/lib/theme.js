@@ -59,8 +59,8 @@ export const FACES = [
 
 export function faceById(id){ return FACES.find(f => f.id === id) || FACES.find(f => f.id === 'playfair-display') || FACES[0]; }
 export function stackOf(id){ const f = faceById(id); return "'"+f.family+"',"+(f.cat === 'sans' ? 'sans-serif' : 'serif'); }
-export function fontVars(headId, bodyId, hs, bs){
-  return ":root{--head:"+stackOf(headId)+";--body:"+stackOf(bodyId)+";--hs:"+(hs||1)+";--bs:"+(bs||1)+
+export function fontVars(headId, bodyId, hs, bs, ps){
+  return ":root{--head:"+stackOf(headId)+";--body:"+stackOf(bodyId)+";--hs:"+(hs||1)+";--bs:"+(bs||1)+";--ps:"+(ps||1)+
     ";--sans:system-ui,'Helvetica Neue',Arial,sans-serif;--mono:ui-monospace,'SFMono-Regular',Menlo,'Courier New',monospace}";
 }
 
