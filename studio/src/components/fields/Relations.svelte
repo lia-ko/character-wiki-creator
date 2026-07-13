@@ -6,6 +6,11 @@
   let { entry, sec, others } = $props();
   const list = $derived(entry.data[sec.key]);
 
+  // when a section declares linkTypes (e.g. Sources → 'source'), surface those entries first
+  const linkTypes = sec.linkTypes || null;
+  const primary = $derived(linkTypes ? others.filter(o => linkTypes.includes(o.type)) : others);
+  const secondary = $derived(linkTypes ? others.filter(o => !linkTypes.includes(o.type)) : []);
+
   const linkedOf = (r) => others.find(o => o.id === r.targetId);
   const imgOf = (r) => r.img || linkedOf(r)?.cover || '';   // pull the linked entry's cover if none set
 
@@ -40,7 +45,18 @@
             <RichEditor value={r.body} multiline placeholder="Write-up…" oninput={(v) => setBody(i, v)} />
             <select class="rlink" bind:value={r.targetId} onchange={markDirty}>
               <option value="">— link to another entry —</option>
-              {#each others as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+              {#if linkTypes}
+                <optgroup label={sec.label}>
+                  {#each primary as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+                </optgroup>
+                {#if secondary.length}
+                  <optgroup label="Other entries">
+                    {#each secondary as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+                  </optgroup>
+                {/if}
+              {:else}
+                {#each others as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+              {/if}
             </select>
           </div>
         </div>

@@ -5,6 +5,14 @@
   import Gallery from './Gallery.svelte';
   import RichSections from './RichSections.svelte';
   import Relations from './Relations.svelte';
+  import Catalog from './Catalog.svelte';
+  import Meter from './Meter.svelte';
+  import Ledger from './Ledger.svelte';
+  import References from './References.svelte';
+  import SourceNotes from './SourceNotes.svelte';
+  import DefList from './DefList.svelte';
+  import Lexicon from './Lexicon.svelte';
+  import Chronology from './Chronology.svelte';
   import TagGroups from './TagGroups.svelte';
   import Excerpts from './Excerpts.svelte';
   import Outline from './Outline.svelte';
@@ -22,11 +30,27 @@
 {:else if sec.type === 'stats'}
   <Stats {entry} {sec} />
 {:else if sec.type === 'gallery'}
-  <Gallery {entry} {sec} />
+  <Gallery {entry} {sec} variant="feature" aspect="16/10" />
 {:else if sec.type === 'richsections'}
   <RichSections {entry} {sec} />
 {:else if sec.type === 'relations'}
   <Relations {entry} {sec} {others} />
+{:else if sec.type === 'catalog'}
+  <Catalog {entry} {sec} {others} />
+{:else if sec.type === 'meter'}
+  <Meter {entry} {sec} />
+{:else if sec.type === 'ledger'}
+  <Ledger {entry} {sec} />
+{:else if sec.type === 'references'}
+  <References {entry} {sec} />
+{:else if sec.type === 'sourcenotes'}
+  <SourceNotes {entry} {sec} />
+{:else if sec.type === 'deflist'}
+  <DefList {entry} {sec} />
+{:else if sec.type === 'lexicon'}
+  <Lexicon {entry} {sec} />
+{:else if sec.type === 'chronology'}
+  <Chronology {entry} {sec} {others} />
 {:else if sec.type === 'taggroups'}
   <TagGroups {entry} {sec} />
 {:else if sec.type === 'excerpts'}

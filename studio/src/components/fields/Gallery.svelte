@@ -1,6 +1,7 @@
 <script>
   import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
   import { pickImages } from '../../lib/images.js';
+  import { imgSrc, imgPos } from '../../lib/model.js';
   let { entry, sec, variant = 'grid', mapStyle = false, aspect = '16/10' } = $props();
   const imgs = $derived(entry.data[sec.key]);
 
@@ -14,12 +15,39 @@
   async function add(){ const start = imgs.length; const urls = await pickImages(true); if (urls && urls.length){ imgs.push(...urls); cur = start; markDirty(); } }
   async function replace(){ const urls = await pickImages(false); if (urls && urls[0]){ if (imgs.length) imgs[0] = urls[0]; else imgs.push(urls[0]); markDirty(); } }
   async function del(i){ if (!(await confirmDelete(true, 'this image'))) return; imgs.splice(i, 1); markDirty(); }
+
+  // drag to reposition the focal point (object-position) of the shown image
+  let primaryEl;
+  let dragging = $state(false);
+  let dstart = null;
+  const parsePos = (p) => { const m = /(-?[\d.]+)%\s+(-?[\d.]+)%/.exec(p || ''); return m ? [+m[1], +m[2]] : [50, 50]; };
+  function setPos(i, x, y){
+    x = Math.max(0, Math.min(100, x)); y = Math.max(0, Math.min(100, y));
+    imgs[i] = { src: imgSrc(imgs[i]), pos: `${x.toFixed(1)}% ${y.toFixed(1)}%` };
+    markDirty();
+  }
+  function dragStart(e){
+    if (!imgs.length) return;
+    const [px, py] = parsePos(imgPos(imgs[cur]));
+    dstart = { x: e.clientX, y: e.clientY, px, py };
+    dragging = true; primaryEl.setPointerCapture(e.pointerId);
+  }
+  function dragMove(e){
+    if (!dragging || !dstart) return;
+    const r = primaryEl.getBoundingClientRect();
+    const dx = (e.clientX - dstart.x) / r.width * 100;
+    const dy = (e.clientY - dstart.y) / r.height * 100;
+    setPos(cur, dstart.px - dx, dstart.py - dy);   // grab-and-drag: image follows the cursor
+  }
+  function dragEnd(){ dragging = false; dstart = null; }
+  function recenter(){ if (imgs.length) setPos(cur, 50, 50); }
+  const repositioned = $derived(imgs.length ? imgPos(imgs[cur]) !== '50% 50%' : false);
 </script>
 
 {#if variant === 'sigil'}
   <div class="sigil">
     {#if imgs.length}
-      <div class="sq" style={`background-image:url(${imgs[0]})`}><button class="x" onclick={() => del(0)} title="remove">✕</button></div>
+      <div class="sq" style={`background-image:url(${imgSrc(imgs[0])})`}><button class="x" onclick={() => del(0)} title="remove">✕</button></div>
     {:else}
       <button class="sq add" onclick={replace}><span>＋</span></button>
     {/if}
@@ -27,12 +55,16 @@
 
 {:else if variant === 'feature'}
   <div class="feat">
-    <div class="primary" class:mapgrid={mapStyle} style={`aspect-ratio:${aspect}` + (imgs.length ? `;background-image:url(${imgs[cur]})` : '')}>
+    <div class="primary" class:mapgrid={mapStyle} class:draggable={imgs.length} class:dragging
+         bind:this={primaryEl}
+         onpointerdown={imgs.length ? dragStart : null} onpointermove={dragMove} onpointerup={dragEnd} onpointercancel={dragEnd}
+         style={`aspect-ratio:${aspect}` + (imgs.length ? `;background-image:url(${imgSrc(imgs[cur])});background-position:${imgPos(imgs[cur])}` : '')}>
       {#if mapStyle}<span class="maptag">Map</span>{/if}
       {#if imgs.length > 1}
-        <button class="nav prev" onclick={prev} title="previous">‹</button>
-        <button class="nav next" onclick={next} title="next">›</button>
+        <button class="nav prev" onpointerdown={(e) => e.stopPropagation()} onclick={prev} title="previous">‹</button>
+        <button class="nav next" onpointerdown={(e) => e.stopPropagation()} onclick={next} title="next">›</button>
       {/if}
+      {#if imgs.length}<span class="draghint">drag to reposition</span>{/if}
       {#if !imgs.length}<button class="bigadd" onclick={add}><span>＋</span><small>add {mapStyle ? 'map & imagery' : 'image'}</small></button>{/if}
     </div>
     {#if imgs.length}
@@ -46,6 +78,7 @@
       <button onclick={add}>＋ Add</button>
       {#if imgs.length}
         {#if cur === 0}<span class="isheader">★ header image</span>{:else}<button onclick={makeCover} title="use this as the header / cover image">★ Set as header</button>{/if}
+        <button onclick={recenter} disabled={!repositioned} title="re-center the image">⌖ Recenter</button>
         <button onclick={() => del(cur)}>✕ Remove shown</button>
       {/if}
     </div>
@@ -54,7 +87,7 @@
 {:else}
   <div class="gal">
     {#each imgs as src, i (i)}
-      <div class="thumb" style={`background-image:url(${src})`}><button class="x" onclick={() => del(i)} title="remove">✕</button></div>
+      <div class="thumb" style={`background-image:url(${imgSrc(src)});background-position:${imgPos(src)}`}><button class="x" onclick={() => del(i)} title="remove">✕</button></div>
     {/each}
     <button class="add" onclick={add}><span>＋</span><small>add image</small></button>
   </div>
@@ -81,6 +114,11 @@
   /* feature: single-image carousel (nav + add / remove-shown, no thumbnail strip) */
   .feat{display:flex;flex-direction:column;gap:8px}
   .primary{position:relative;border-radius:12px;background:var(--panel-2) center/cover;border:1px solid var(--rule);overflow:hidden}
+  .primary.draggable{cursor:grab;touch-action:none}
+  .primary.dragging{cursor:grabbing}
+  .draghint{position:absolute;bottom:8px;right:10px;z-index:1;font-family:var(--mono);font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.45);padding:3px 7px;border-radius:5px;opacity:0;transition:opacity .12s;pointer-events:none}
+  .primary.draggable:hover .draghint{opacity:1}
+  .primary.dragging .draghint{opacity:0}
   .primary.mapgrid::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px),repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px)}
   .primary.mapgrid{background-color:#1a2226}
   .maptag{position:absolute;top:8px;left:10px;z-index:1;font-family:var(--mono);font-size:.5rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5)}
@@ -97,6 +135,7 @@
   .ccount{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;color:var(--faint)}
   .caredit{display:flex;gap:8px;justify-content:center}
   .caredit button{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule);background:none;color:var(--muted);border-radius:6px;padding:6px 12px;cursor:pointer}
-  .caredit button:hover{border-color:var(--accent);color:var(--ink)}
+  .caredit button:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
+  .caredit button:disabled{opacity:.4;cursor:default}
   .isheader{display:flex;align-items:center;font-family:var(--mono);font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);padding:6px 4px}
 </style>

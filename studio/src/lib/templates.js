@@ -25,6 +25,7 @@ export const TEMPLATES = {
       { key: 'bio', label: 'Biography', type: 'richsections', slot: 'main' },
       { key: 'relationships', label: 'Relationships', type: 'relations', slot: 'main' },
       { key: 'homes', label: 'Home & haunts', type: 'relations', slot: 'main', display: 'expand' },
+      { key: 'skills', label: 'Abilities & skills', type: 'taggroups', slot: 'main' },
       { key: 'tropes', label: 'Tropes', type: 'taggroups', slot: 'main' },
       { key: 'excerpts', label: 'Excerpts', type: 'excerpts', slot: 'main' },
       { key: 'soundtrack', label: 'Soundtrack', type: 'spotify', slot: 'main' },
@@ -161,18 +162,171 @@ export const TEMPLATES = {
       { key: 'structure', label: 'Structure', type: 'outline', slot: 'main' },
     ],
   },
+
+  /* ---- region / group collection sheets (Nature + Culture) ----
+     Each is a survey of a place or people holding many items in a `catalog`
+     (grouped field-guide cards, each with a scale badge + optional link-out to a
+     deep `article` entry). A `meter` gives one domain-fit scale in the header. */
+  flora: {
+    type: 'flora', label: 'Flora', plural: 'Flora', icon: '⚘', layout: 'hero', media: 'feature',
+    title: { ph: 'Region / group (e.g. Flora of the Cindermarch)' }, subtitle: { ph: 'biome / scope (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','Biome','Climate','Growing season','Notable species','Status'] },
+      { key: 'overview', label: 'Botany & overview', type: 'richsections', slot: 'main' },
+      { key: 'catalog', label: 'Plants & fungi', type: 'catalog', slot: 'main', scale: 'Rarity' },
+      { key: 'byuse', label: 'By use', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Field notes', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  fauna: {
+    type: 'fauna', label: 'Fauna', plural: 'Fauna', icon: '♘', layout: 'hero', media: 'feature',
+    title: { ph: 'Region / group (e.g. Fauna of the Sallow Fens)' }, subtitle: { ph: 'biome / scope (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','Biome','Climate','Threat level','Notable species','Status'] },
+      { key: 'scale', label: 'Threat level', type: 'meter', slot: 'main', levels: ['Low','Moderate','High','Extreme'] },
+      { key: 'overview', label: 'Ecology & overview', type: 'richsections', slot: 'main' },
+      { key: 'catalog', label: 'Creatures', type: 'catalog', slot: 'main', scale: 'Rarity' },
+      { key: 'byhabitat', label: 'By habitat', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Field notes', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  religion: {
+    type: 'religion', label: 'Religion', plural: 'Religions', icon: '☸', layout: 'hero', media: 'feature',
+    title: { ph: 'Region / people (e.g. Faiths of the Western Realms)' }, subtitle: { ph: 'scope (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Iconography', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','People','Dominant faith','Tolerance','Status'] },
+      { key: 'scale', label: 'Tolerance', type: 'meter', slot: 'main', levels: ['Persecuted','Uneasy','Broad','Open'] },
+      { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
+      { key: 'catalog', label: 'Faiths & cults', type: 'catalog', slot: 'main', scale: 'Standing' },
+      { key: 'deities', label: 'Deities & powers', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  beliefs: {
+    type: 'beliefs', label: 'Beliefs & Customs', plural: 'Beliefs', icon: '☯', layout: 'hero', media: 'feature',
+    title: { ph: 'Region / people (e.g. Customs of the Tern Coast)' }, subtitle: { ph: 'culture / scope (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','People','Related faith','Prevalence','Status'] },
+      { key: 'scale', label: 'How strictly kept', type: 'meter', slot: 'main', levels: ['Loose','Held','Strict','Absolute'] },
+      { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
+      { key: 'catalog', label: 'Customs & beliefs', type: 'catalog', slot: 'main', scale: 'Observance' },
+      { key: 'values', label: 'Values & taboos', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Sayings', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  folklore: {
+    type: 'folklore', label: 'Folklore', plural: 'Folklore', icon: '❧', layout: 'hero', media: 'feature',
+    title: { ph: 'Region / people (e.g. Folklore of the Sallow Fens)' }, subtitle: { ph: 'myths & legends / scope (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','People','Origin','Notable tales','Status'] },
+      { key: 'scale', label: 'How widely told', type: 'meter', slot: 'main', levels: ['Local','Regional','Widespread','Ubiquitous'] },
+      { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
+      { key: 'catalog', label: 'Tales & legends', type: 'catalog', slot: 'main', scale: 'Currency' },
+      { key: 'motifs', label: 'Motifs & themes', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Tellings', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  language: {
+    type: 'language', label: 'Language', plural: 'Languages', icon: '¶', layout: 'hero', media: 'feature',
+    title: { ph: 'Region / people (e.g. Tongues of the Tern Coast)' }, subtitle: { ph: 'family / scope (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery & script', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','People','Family','Script','Speakers','Status'] },
+      { key: 'scale', label: 'How widely spoken', type: 'meter', slot: 'main', levels: ['Local','Regional','Common','Lingua franca'] },
+      { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
+      { key: 'catalog', label: 'Tongues & dialects', type: 'catalog', slot: 'main', scale: 'Vitality' },
+      { key: 'features', label: 'Features & sample', type: 'taggroups', slot: 'main' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+    ],
+  },
+
+  /* ---- research desk: reference notes with sourced reliability + a real-vs-invented
+     ledger. Historical fiction's non-negotiable; serves any research-heavy genre.
+     Reuses the catalog (a source per card, its scale badge = per-source Reliability)
+     and a header `meter` for overall confidence; adds the `ledger` field. ---- */
+  research: {
+    type: 'research', label: 'Research', plural: 'Research', icon: '❡', layout: 'hero', media: 'feature',
+    title: { ph: 'Topic (e.g. Norman siege warfare)' }, subtitle: { ph: 'discipline / period (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Documents & references', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Topic','Discipline','Period','Region','Sources','Status'] },
+      /* — Understand — (lean core = not optional: quickfacts, findings, + sources below) */
+      { key: 'quickfacts', label: 'Quick facts', type: 'deflist', slot: 'main', zone: 'Understand', termPh: 'What', defPh: 'Figure / fact', notePh: 'source', addLabel: 'fact' },
+      { key: 'findings', label: 'Synthesis', type: 'richsections', slot: 'main', zone: 'Understand' },
+      { key: 'timeline', label: 'Timeline', type: 'chronology', slot: 'main', zone: 'Understand', optional: true },
+      { key: 'keyfigures', label: 'Key figures', type: 'relations', slot: 'main', zone: 'Understand', optional: true, linkTypes: ['character','source'], addLabel: 'figure' },
+      /* — Sources & material — */
+      { key: 'sources', label: 'Sources', type: 'relations', slot: 'main', zone: 'Sources & material', display: 'expand', linkTypes: ['source'], addLabel: 'source' },
+      { key: 'links', label: 'Links & further reading', type: 'references', slot: 'main', zone: 'Sources & material', optional: true },
+      { key: 'excerpts', label: 'Quotes & flavour', type: 'excerpts', slot: 'main', zone: 'Sources & material', optional: true },
+      /* — Craft reference — */
+      { key: 'glossary', label: 'Lexicon', type: 'lexicon', slot: 'main', zone: 'Craft reference', optional: true },
+      { key: 'voice', label: 'Voice & speech', type: 'taggroups', slot: 'main', zone: 'Craft reference', optional: true },
+      { key: 'sensory', label: 'Sensory & texture', type: 'taggroups', slot: 'main', zone: 'Craft reference', optional: true },
+      /* — Accuracy & story — */
+      { key: 'ledger', label: 'Real vs invented', type: 'ledger', slot: 'main', zone: 'Accuracy & story', optional: true },
+      { key: 'avoid', label: 'Avoid / anachronism', type: 'deflist', slot: 'main', zone: 'Accuracy & story', optional: true, variant: 'avoid', termPh: 'Don’t…', defPh: 'why / the correct version', notePh: 'source', addLabel: 'rule' },
+      { key: 'questions', label: 'Open questions', type: 'taggroups', slot: 'main', zone: 'Accuracy & story', optional: true },
+      { key: 'feeds', label: 'Feeds into', type: 'relations', slot: 'main', zone: 'Accuracy & story', optional: true },
+      /* — Deeper — */
+      { key: 'subtopics', label: 'Sub-topics', type: 'relations', slot: 'main', zone: 'Deeper', optional: true, display: 'expand' },
+    ],
+  },
+
+  /* ---- source: a reusable, note-rich reading record. Authored once, linked from any
+     Research topic it informs. The `sourcenotes` field is the workspace: chapters →
+     typed notes (quote/fact/summary/question/idea) + plates (images, placeable). ---- */
+  source: {
+    type: 'source', label: 'Source', plural: 'Sources', icon: '▤', layout: 'hero', media: 'none',
+    title: { ph: 'Title (e.g. Henry III)' }, subtitle: { ph: 'author · volume / edition (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Cover & imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Author','Year','Publisher','Type','Reliability','Status'] },
+      { key: 'takeaways', label: 'Takeaways', type: 'richsections', slot: 'main' },
+      { key: 'notes', label: 'Notes', type: 'sourcenotes', slot: 'main' },
+    ],
+  },
+
+  /* ---- shared deep single-subject sheet: any catalog item can link out to one ---- */
+  article: {
+    type: 'article', label: 'Article', plural: 'Articles', icon: '◆', layout: 'split',
+    title: { ph: 'Subject (a creature, plant, faith, custom, tale…)' }, subtitle: { ph: 'kind (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Origin','Range','Rarity','Status'] },
+      { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
+      { key: 'connections', label: 'Connections', type: 'relations', slot: 'main' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+    ],
+  },
 };
 
 // Display order for the type picker / project view.
-export const ENTRY_TYPES = ['character','house','organization','realm','location','business','dwelling','lore','item','event','plot'];
+export const ENTRY_TYPES = ['character','house','organization','realm','location','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','lore','item','research','source','article'];
 
 // Type families — group the entry types for the project-view category filter + the
-// "New entry" picker. Source of truth for section order too (people → places → story → lore).
+// "New entry" picker. Source of truth for section order too (people → places → nature → culture → story → lore).
 export const FAMILIES = [
-  { key: 'people', label: 'People', types: ['character','house','organization'] },
-  { key: 'places', label: 'Places', types: ['realm','location','business','dwelling'] },
-  { key: 'story',  label: 'Story',  types: ['event','plot'] },
-  { key: 'lore',   label: 'Lore',   types: ['lore','item'] },
+  { key: 'people',  label: 'People',  types: ['character','house','organization'] },
+  { key: 'places',  label: 'Places',  types: ['realm','location','business','dwelling'] },
+  { key: 'nature',  label: 'Nature',  types: ['flora','fauna'] },
+  { key: 'culture', label: 'Culture', types: ['religion','beliefs','folklore','language'] },
+  { key: 'story',   label: 'Story',   types: ['event','plot'] },
+  { key: 'lore',    label: 'Lore',    types: ['lore','item','research','source','article'] },
 ];
 
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
@@ -188,6 +342,14 @@ export function emptyValue(section){
     case 'gallery': return [];
     case 'richsections': return [];
     case 'relations': return [];
+    case 'catalog': return [];
+    case 'references': return [];
+    case 'deflist': return [];
+    case 'lexicon': return [];
+    case 'chronology': return [];
+    case 'sourcenotes': return { chapters: [] };
+    case 'ledger': return [];
+    case 'meter': return { levels: (section.levels || []).slice(), at: 0 };
     case 'taggroups': return [];
     case 'excerpts': return [];
     case 'outline': return { acts: [] };

@@ -1,7 +1,8 @@
 <script>
-  import { curProject, curEntry, openProject, openEntry, markDirty, toast } from '../lib/store.svelte.js';
+  import { curProject, curEntry, openProject, openEntry, markDirty, toast, addSection, delSection, hideSection, restoreSection, moveSection } from '../lib/store.svelte.js';
+  import { dismissable } from '../lib/dismissable.js';
   import { templateFor } from '../lib/templates.js';
-  import { coverOf, backlinksFor, ensureEntryData } from '../lib/model.js';
+  import { coverOf, backlinksFor, ensureEntryData, bodySectionsOf } from '../lib/model.js';
   import { exportSingleEntry } from '../lib/exportentry.js';
 
   let exporting = $state(false);
@@ -39,8 +40,29 @@
 
   const gallerySec = $derived(tpl?.sections.find(s => s.type === 'gallery') || null);
   const statsSec = $derived(tpl?.sections.find(s => s.type === 'stats') || null);
-  const bodySecs = $derived(tpl ? tpl.sections.filter(s => s.slot !== 'aside') : []);
+  const bodySecs = $derived(entry ? bodySectionsOf(entry) : []);
+  const hiddenSecs = $derived(tpl && entry?.hidden?.length ? tpl.sections.filter(s => s.slot !== 'aside' && !s.lead && entry.hidden.includes(s.key)) : []);
+  // addable (currently-hidden template) sections, grouped by their zone for the add menu
+  const addableGroups = $derived.by(() => {
+    const groups = [], byZone = {};
+    for (const s of hiddenSecs){ const z = s.zone || 'More sections'; if (!byZone[z]){ byZone[z] = []; groups.push(z); } byZone[z].push(s); }
+    return groups.map(z => ({ zone: z, secs: byZone[z] }));
+  });
   const backlinks = $derived(entry ? backlinksFor(entry, project) : []);
+
+  // add / remove custom sections (headings) on this entry
+  let secMenu = $state(false);
+  const ADD_TYPES = [
+    { type: 'richsections', label: 'Prose', hint: 'Headed write-ups' },
+    { type: 'gallery', label: 'Image plate', hint: 'Figures / images' },
+    { type: 'references', label: 'References', hint: 'Books, links, videos' },
+    { type: 'taggroups', label: 'Tag list', hint: 'Grouped chips' },
+    { type: 'excerpts', label: 'Quotes', hint: 'Quotations' },
+    { type: 'relations', label: 'Links', hint: 'Linked entries' },
+    { type: 'catalog', label: 'Catalog', hint: 'Field-guide cards' },
+  ];
+  const DEF_LABEL = { richsections: 'Notes', gallery: 'Image plate', references: 'References', taggroups: 'Traits', excerpts: 'Quotes', relations: 'Connections', catalog: 'Catalog' };
+  function doAdd(t){ addSection(entry, t.type, { label: DEF_LABEL[t.type] || 'New section' }); secMenu = false; }
 
   // Backfill section keys added to the template after this entry was created (e.g. Soundtrack),
   // so their fields have a value to bind to. Silent — persists on the next real edit.
@@ -63,13 +85,62 @@
   </div>
 
   {#key entry.id}
+    <!-- section list: template sections + per-entry custom sections, then the add control -->
+    {#snippet bodyList()}
+      {#each bodySecs as sec, i (sec.key)}
+        {#if sec.zone && sec.zone !== bodySecs[i - 1]?.zone}
+          <div class="zonebar"><span class="zt">{sec.zone}</span><span class="zl"></span></div>
+        {/if}
+        {#if sec.lead}
+          <Field {entry} {sec} {others} />
+        {:else if sec.custom}
+          <div class="csh">
+            <input class="cshin" bind:value={sec.label} oninput={markDirty} placeholder="Heading…" />
+            <div class="seccc">
+              <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move section up">▲</button>
+              <button class="csmv" onclick={() => moveSection(entry, sec.key, 1)} title="move section down">▼</button>
+              <button class="csx" onclick={() => delSection(entry, sec.key)} title="delete section">✕</button>
+            </div>
+          </div>
+          <Field {entry} {sec} {others} />
+        {:else}
+          <div class="secwrap">
+            <h2>{sec.label}</h2>
+            <div class="seccc onhover">
+              <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move section up">▲</button>
+              <button class="csmv" onclick={() => moveSection(entry, sec.key, 1)} title="move section down">▼</button>
+              <button class="csx" onclick={() => hideSection(entry, sec)} title="remove section">✕</button>
+            </div>
+          </div>
+          <Field {entry} {sec} {others} />
+        {/if}
+      {/each}
+      <div class="addsec" use:dismissable={() => secMenu = false}>
+        <button class="addsecbtn" onclick={() => secMenu = !secMenu}>＋ Add section</button>
+        {#if secMenu}
+          <div class="addmenu">
+            {#if hiddenSecs.length}
+              {#each addableGroups as g}
+                <div class="addlabel">{g.zone}</div>
+                {#each g.secs as s}
+                  <button class="addopt" onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>section</small></button>
+                {/each}
+              {/each}
+              <div class="addsep"></div>
+            {/if}
+            <div class="addlabel">Custom block</div>
+            {#each ADD_TYPES as t}
+              <button class="addopt" onclick={() => doAdd(t)}><span>{t.label}</span><small>{t.hint}</small></button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/snippet}
+
     <!-- ============ OUTLINE (plot) ============ -->
     {#if layout === 'outline'}
       <div class="wrap-narrow">
-        {#each bodySecs as sec (sec.key)}
-          {#if sec.lead}<Field {entry} {sec} {others} />
-          {:else}<h2>{sec.label}</h2><Field {entry} {sec} {others} />{/if}
-        {/each}
+        {@render bodyList()}
       </div>
 
     <!-- ============ SPLIT (character, item) ============ -->
@@ -81,10 +152,7 @@
         <div class="col">
           <EntryTitle {entry} {tpl} />
           {#if statsSec}<div class="blk-h">{statsSec.label}</div><Stats {entry} sec={statsSec} />{/if}
-          {#each bodySecs as sec (sec.key)}
-            {#if sec.lead}<Field {entry} {sec} {others} />
-            {:else}<h2>{sec.label}</h2><Field {entry} {sec} {others} />{/if}
-          {/each}
+          {@render bodyList()}
         </div>
       </div>
 
@@ -106,20 +174,14 @@
         {#if statsSec}<div class="blk-h">{statsSec.label}</div><Stats {entry} sec={statsSec} />{/if}
         {#if tpl.media === 'none' && gallerySec}<div class="blk-h">{gallerySec.label}</div><Gallery {entry} sec={gallerySec} variant="grid" />{/if}
 
-        {#each bodySecs as sec (sec.key)}
-          {#if sec.lead}<Field {entry} {sec} {others} />
-          {:else}<h2>{sec.label}</h2><Field {entry} {sec} {others} />{/if}
-        {/each}
+        {@render bodyList()}
       </div>
 
     <!-- ============ INFOBOX (lore) ============ -->
     {:else}
       <div class="wbody">
         <main class="article">
-          {#each bodySecs as sec (sec.key)}
-            {#if sec.lead}<Field {entry} {sec} {others} />
-            {:else}<h2>{sec.label}</h2><Field {entry} {sec} {others} />{/if}
-          {/each}
+          {@render bodyList()}
         </main>
         <aside class="infobox">
           <EntryTitle {entry} {tpl} center />
@@ -168,6 +230,41 @@
   /* shared section heading + details label */
   h2{font-family:var(--head);font-size:calc(1.5rem*var(--hs,1));font-weight:400;color:var(--ink);margin:20px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
   .blk-h{font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:4px 0 -4px}
+
+  /* custom (user-added) section heading: editable, deletable */
+  .csh{display:flex;align-items:center;gap:8px;margin:20px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+  .cshin{flex:1;min-width:0;font-family:var(--head);font-size:calc(1.5rem*var(--hs,1));font-weight:400;color:var(--ink);background:none;border:none;outline:none;padding:0}
+  .cshin::placeholder{color:var(--faint)}
+  .csh:focus-within{border-bottom-color:var(--accent)}
+  .csx{flex:none;border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:6px;cursor:pointer;padding:4px 9px;font-size:.72rem;line-height:1}
+  .csx:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* section controls: move up/down + delete. Cluster shows on hover for template
+     sections, and is always visible on custom (editable-heading) sections. */
+  .seccc{display:flex;align-items:center;gap:6px}
+  .secwrap{position:relative}
+  .secwrap .seccc{position:absolute;right:0;top:12px}
+  .seccc.onhover{opacity:0;transition:opacity .12s}
+  .secwrap:hover .seccc.onhover,.seccc.onhover:focus-within{opacity:1}
+  .csmv{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:6px;cursor:pointer;padding:4px 7px;font-size:.6rem;line-height:1}
+  .csmv:hover{border-color:var(--accent);color:var(--ink)}
+
+  /* zone divider (research grouped zones) */
+  .zonebar{display:flex;align-items:center;gap:12px;margin:28px 0 6px}
+  .zonebar .zt{font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-soft);white-space:nowrap}
+  .zonebar .zl{flex:1;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 50%,transparent),transparent)}
+
+  /* add-section control */
+  .addsec{position:relative;margin-top:16px}
+  .addsep{height:1px;background:var(--rule);margin:5px 2px}
+  .addlabel{font-family:var(--mono);font-size:.54rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:4px 11px 2px}
+  .addsecbtn{border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:var(--sans);font-size:.82rem}
+  .addsecbtn:hover{border-color:var(--accent);color:var(--ink)}
+  .addmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);left:0;min-width:220px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
+  .addopt{display:flex;flex-direction:column;gap:1px;text-align:left;background:none;border:none;border-radius:7px;padding:8px 11px;cursor:pointer;color:var(--ink)}
+  .addopt:hover{background:var(--panel-2)}
+  .addopt span{font-family:var(--sans);font-size:.84rem}
+  .addopt small{font-family:var(--mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 
   /* outline (plot) */
   .wrap-narrow{max-width:760px;margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:10px}

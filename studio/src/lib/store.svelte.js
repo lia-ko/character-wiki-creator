@@ -1,5 +1,6 @@
 /* ============ REACTIVE APP STATE (Svelte 5 runes) ============ */
-import { createWorkspace, createProject, createEntry, migrateWorkspace } from './model.js';
+import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySectionsOf } from './model.js';
+import { emptyValue } from './templates.js';
 import { idbSet, idbGet } from './persist.js';
 
 export const app = $state({
@@ -138,6 +139,53 @@ export function clearDirty(){ app.dirty = false; }
 // actually holds content; blank items delete silently. Returns Promise<boolean>.
 export function confirmDelete(hasContent, what){
   return hasContent ? confirmModal('Delete ' + what + '?') : Promise.resolve(true);
+}
+
+/* ---- per-entry sections: add custom headings, delete/hide any section ---- */
+let secSeq = 0;
+const sectionHasContent = (val) => Array.isArray(val)
+  ? val.length > 0
+  : (val && typeof val === 'object' ? Object.keys(val).some(k => val[k] && (!Array.isArray(val[k]) || val[k].length)) : !!val);
+
+export function addSection(entry, type, opts = {}){
+  if (!entry.extra) entry.extra = [];
+  const key = 'x' + Date.now().toString(36) + (secSeq++);
+  const def = { key, label: opts.label || 'New section', type, slot: 'main', custom: true };
+  if (type === 'catalog') def.scale = opts.scale || 'Rating';
+  entry.extra.push(def);
+  entry.data[key] = emptyValue(def);
+  markDirty();
+  return def;
+}
+// custom section → removed outright (data discarded)
+export async function delSection(entry, key){
+  const i = (entry.extra || []).findIndex(s => s.key === key);
+  if (i < 0) return;
+  const def = entry.extra[i];
+  if (!(await confirmDelete(sectionHasContent(entry.data[key]), def.label ? '“' + def.label + '”' : 'this section'))) return;
+  entry.extra.splice(i, 1);
+  delete entry.data[key];
+  markDirty();
+}
+// template section → hidden non-destructively (data kept, restorable)
+export async function hideSection(entry, sec){
+  if (!(await confirmDelete(sectionHasContent(entry.data[sec.key]), sec.label ? '“' + sec.label + '”' : 'this section'))) return;
+  if (!entry.hidden) entry.hidden = [];
+  if (!entry.hidden.includes(sec.key)) entry.hidden.push(sec.key);
+  markDirty();
+}
+export function restoreSection(entry, key){
+  const i = (entry.hidden || []).indexOf(key);
+  if (i >= 0){ entry.hidden.splice(i, 1); markDirty(); }
+}
+// move a body section up (-1) or down (+1) among the non-lead sections
+export function moveSection(entry, key, dir){
+  const order = bodySectionsOf(entry).filter(s => !s.lead).map(s => s.key);
+  const i = order.indexOf(key), j = i + dir;
+  if (i < 0 || j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  entry.order = order;
+  markDirty();
 }
 
 /* ---- navigation ---- */

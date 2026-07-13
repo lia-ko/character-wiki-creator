@@ -46,14 +46,39 @@ export function createEntry(type, name){
   const tpl = templateFor(type);
   const data = {};
   tpl.sections.forEach(sec => { data[sec.key] = emptyValue(sec); });
-  return { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', group: '', data };
+  const entry = { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', group: '', data };
+  // sections flagged `optional` start hidden — the entry opens on a lean core, the rest
+  // are added on demand from the "＋ Add section" menu (which lists them under their zone).
+  const optional = tpl.sections.filter(s => s.optional).map(s => s.key);
+  if (optional.length) entry.hidden = optional;
+  return entry;
 }
 
-// Backfill any template section keys missing from an entry's data (e.g. a section added to the
-// template after the entry was created). Used by both the loader (migrate) and the live editor.
+// An entry's effective sections: the template's sections plus any per-entry custom
+// sections the user has added (entry.extra).
+export function sectionsOf(entry){
+  const base = templateFor(entry.type).sections;
+  return (entry && entry.extra && entry.extra.length) ? base.concat(entry.extra) : base;
+}
+
+// The body sections to render, in display order: drop aside + hidden, keep the lead
+// pinned first, and apply the per-entry reorder (entry.order) to the rest.
+export function bodySectionsOf(entry){
+  const hidden = entry.hidden || [];
+  const secs = sectionsOf(entry).filter(s => s.slot !== 'aside' && !hidden.includes(s.key));
+  const order = entry.order;
+  if (!order || !order.length) return secs;
+  const lead = secs.filter(s => s.lead), rest = secs.filter(s => !s.lead);
+  const idx = (k) => { const i = order.indexOf(k); return i === -1 ? Infinity : i; };
+  rest.sort((a, b) => idx(a.key) - idx(b.key));   // stable: unordered keys keep their natural order, at the end
+  return lead.concat(rest);
+}
+
+// Backfill any section keys missing from an entry's data (a section added to the template
+// after the entry was created, or a restored custom section). Used by the loader + live editor.
 export function ensureEntryData(entry){
   if (entry && entry.data){
-    templateFor(entry.type).sections.forEach(s => { if (!(s.key in entry.data)) entry.data[s.key] = emptyValue(s); });
+    sectionsOf(entry).forEach(s => { if (!(s.key in entry.data)) entry.data[s.key] = emptyValue(s); });
   }
   return entry;
 }
@@ -76,12 +101,20 @@ export function createWorkspace(){
   };
 }
 
+// A gallery item is a URL string or, once repositioned, { src, pos } where pos is
+// a CSS object-position (e.g. "50% 30%"). These helpers read either shape.
+export const imgSrc = (x) => (x && typeof x === 'object') ? x.src : x;
+export const imgPos = (x) => (x && typeof x === 'object' && x.pos) ? x.pos : '50% 50%';
+
 // Cover image for cards: first gallery image of any section, if present.
 export function coverOf(entry){
   if (!entry || !entry.data) return '';
   for (const k in entry.data){
     const v = entry.data[k];
-    if (Array.isArray(v) && v.length && typeof v[0] === 'string' && /^data:|^https?:|^\.\.?\//.test(v[0])) return v[0];
+    if (Array.isArray(v) && v.length){
+      const s = imgSrc(v[0]);
+      if (typeof s === 'string' && /^data:|^https?:|^\.\.?\//.test(s)) return s;
+    }
   }
   return '';
 }
