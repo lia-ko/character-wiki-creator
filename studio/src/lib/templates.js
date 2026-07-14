@@ -23,6 +23,7 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Portraits', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Age','Height','Pronouns','Origin','Role','Status','Languages'] },
       { key: 'bio', label: 'Biography', type: 'richsections', slot: 'main' },
+      { key: 'arc', label: 'Arc & interiority', type: 'arc', slot: 'main', optional: true },
       { key: 'relationships', label: 'Relationships', type: 'relations', slot: 'main' },
       { key: 'homes', label: 'Home & haunts', type: 'relations', slot: 'main', display: 'expand' },
       { key: 'skills', label: 'Abilities & skills', type: 'taggroups', slot: 'main' },
@@ -32,17 +33,23 @@ export const TEMPLATES = {
     ],
   },
   location: {
-    type: 'location', label: 'Location', plural: 'Locations', icon: '⌖', layout: 'hero', media: 'feature',
+    type: 'location', label: 'Location', plural: 'Locations', icon: '⌖', layout: 'codex',
     title: { ph: 'Place name' }, subtitle: { ph: 'region / kind (optional)' },
     sections: [
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      /* aside rail: Kind chooser → imagery → Details → At a glance */
+      { key: 'kind', label: 'Kind', type: 'kind', slot: 'aside' },
       { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
-      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','Type','Population','Ruler','Climate','Status'] },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','Type','Population','Ruler','Status'] },
+      { key: 'gauges', label: 'At a glance', type: 'gauges', slot: 'aside', optional: true },
+      /* article */
       { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
-      { key: 'notable', label: 'Notable figures & sites', type: 'relations', slot: 'main', display: 'expand' },
-      { key: 'businesses', label: 'Shops & businesses', type: 'relations', slot: 'main', display: 'expand' },
       { key: 'features', label: 'Features', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'notable', label: 'Notable figures & sites', type: 'relations', slot: 'main', display: 'expand' },
+      { key: 'businesses', label: 'Shops & businesses', type: 'relations', slot: 'main', display: 'expand', optional: true },
+      { key: 'hidden', label: 'The hidden', type: 'richsections', slot: 'main', optional: true },
+      { key: 'history', label: 'History', type: 'richsections', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   dwelling: {
@@ -80,7 +87,7 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Sigil & imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Seat','Head','Founded','Region','Allegiance','Status'] },
       { key: 'history', label: 'History', type: 'richsections', slot: 'main' },
-      { key: 'lineage', label: 'Lineage', type: 'lineage', slot: 'main' },
+      { key: 'lineage', label: 'Lineage', type: 'familytree', slot: 'main' },
       { key: 'allegiances', label: 'Allegiances & ties', type: 'allegianceweb', slot: 'main' },
       { key: 'holdings', label: 'Seats & holdings', type: 'relations', slot: 'main' },
       { key: 'tenets', label: 'Words & traditions', type: 'taggroups', slot: 'main' },
@@ -102,19 +109,110 @@ export const TEMPLATES = {
       { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
     ],
   },
-  realm: {
-    type: 'realm', label: 'Realm / Region', plural: 'Realms', icon: '⬢', layout: 'hero', media: 'feature', mapStyle: true,
-    title: { ph: 'Realm / region name' }, subtitle: { ph: 'kingdom, region, city-state…' },
+  /* ---- a distinct kind of people / beings — flexible across biological species
+     (Asari, werewolves) and culturally-defined peoples (Air Nomads). Lean core +
+     opt-in specialist sections so a cultural people isn't shown empty "banes". ---- */
+  species: {
+    type: 'species', label: 'Species / People', plural: 'Peoples', icon: '❂', layout: 'codex',
+    title: { ph: 'Name (e.g. Asari · Air Nomads · Werewolves)' }, subtitle: { ph: 'kind / concept (optional)' },
     sections: [
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      /* — composable infobox (aside rail) — */
+      { key: 'gallery', label: 'Depiction', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Kind','Origin','Homeland','Lifespan','Population','Status'] },
+      { key: 'powers', label: 'Powers & abilities', type: 'taggroups', slot: 'aside', optional: true },
+      { key: 'weaknesses', label: 'Weaknesses & banes', type: 'taggroups', slot: 'aside', optional: true },
+      /* — the article (main) — */
+      { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
+      { key: 'society', label: 'Society & culture', type: 'richsections', slot: 'main', optional: true },
+      { key: 'lifecycle', label: 'Lifecycle', type: 'richsections', slot: 'main', optional: true },
+      { key: 'history', label: 'History', type: 'history', slot: 'main', optional: true },
+      { key: 'ties', label: 'Relations with other groups', type: 'ties', slot: 'main', optional: true, linkTypes: ['species','organization','house','realm'] },
+      { key: 'subtypes', label: 'Subtypes & breeds', type: 'relations', slot: 'band', display: 'expand', optional: true, linkTypes: ['species','article'], addLabel: 'subtype' },
+      { key: 'members', label: 'Notable members', type: 'relations', slot: 'main', optional: true, linkTypes: ['character'], addLabel: 'member' },
+      { key: 'excerpts', label: 'Lore & accounts', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+  /* ---- realm / setting: a genre-neutral place codex. A `kind` chooser (see
+     kinds.js) seeds the Details keys, the At-a-glance gauges, and reveals the
+     genre-relevant sections; the lean core below works with no Kind at all.
+     Most article sections are opt-in so a blank sheet isn't a fantasy form. ---- */
+  realm: {
+    type: 'realm', label: 'Realm / Setting', plural: 'Realms', icon: '⬢', layout: 'codex', mapStyle: true,
+    title: { ph: 'Realm / setting name' }, subtitle: { ph: 'kingdom · station · sprawl · megacity…' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      /* aside rail: Kind chooser → map → Details → At a glance */
+      { key: 'kind', label: 'Kind', type: 'kind', slot: 'aside' },
       { key: 'gallery', label: 'Map & imagery', type: 'gallery', slot: 'aside' },
-      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Capital','Ruling house','Government','Population','Religion','Status'] },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Capital','Government','Population','Status'] },
+      { key: 'gauges', label: 'At a glance', type: 'gauges', slot: 'aside', optional: true },
+      /* article — lean core (geography · locations · powers · passages); the rest opt-in / Kind-seeded */
       { key: 'geography', label: 'Geography & description', type: 'richsections', slot: 'main' },
+      { key: 'government', label: 'Government & law', type: 'richsections', slot: 'main', optional: true },
+      { key: 'economy', label: 'Economy & trade', type: 'richsections', slot: 'main', optional: true },
+      { key: 'military', label: 'Military & defense', type: 'richsections', slot: 'main', optional: true },
+      { key: 'systems', label: 'Systems & infrastructure', type: 'richsections', slot: 'main', optional: true },
+      { key: 'culture', label: 'Culture & daily life', type: 'richsections', slot: 'main', optional: true },
+      { key: 'districts', label: 'Districts & quarters', type: 'taggroups', slot: 'main', optional: true },
       { key: 'locations', label: 'Notable locations', type: 'relations', slot: 'main', display: 'expand' },
-      { key: 'powers', label: 'Powers & houses', type: 'relations', slot: 'main' },
-      { key: 'peoples', label: 'Peoples & cultures', type: 'taggroups', slot: 'main' },
-      { key: 'history', label: 'History', type: 'richsections', slot: 'main' },
+      { key: 'powers', label: 'Powers & factions', type: 'relations', slot: 'main' },
+      { key: 'peoples', label: 'Peoples & cultures', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'hidden', label: 'The hidden', type: 'richsections', slot: 'main', optional: true },
+      { key: 'history', label: 'History', type: 'richsections', slot: 'main', optional: true },
+      { key: 'relations', label: 'Relations', type: 'ties', slot: 'main', optional: true, linkTypes: ['realm','organization','house','species'] },
       { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+    ],
+  },
+  /* ---- relationship: a first-class sheet for a key pairing, linked to its two Character
+     entries (both get an auto-backlink). Genre-neutral — a romance, rivalry, mentor/protégé,
+     a pair of foils. The `dyad` field carries the whole core: the two people + dynamic +
+     status, the central tension, and the MIRRORED his/her columns (asymmetry is the point).
+     Key moments reuse the History timeline (★ = the black moment / turning point). ---- */
+  relationship: {
+    type: 'relationship', label: 'Relationship', plural: 'Relationships', icon: '↔', layout: 'hero', media: 'none',
+    title: { ph: 'The pairing (e.g. Cael & Bren)' }, subtitle: { ph: 'dynamic (optional)' },
+    sections: [
+      { key: 'summary', label: 'The pitch', type: 'richline', slot: 'main', lead: true },
+      { key: 'dyad', label: 'The pairing', type: 'dyad', slot: 'main' },
+      { key: 'trajectory', label: 'Trajectory', type: 'arc', mode: 'relationship', slot: 'main', optional: true },
+      { key: 'beats', label: 'Key moments', type: 'history', slot: 'main' },
+      { key: 'notes', label: 'Notes', type: 'richsections', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+  /* ---- case: the investigation dossier for a mystery. A `suspects` grid (motive/means/
+     opportunity/alibi + suspicion + a writer-only guilty flag) and `clues` as two-faced
+     cards (reads-as vs means · genuine/red-herring · implicates · planted-where). The
+     solution is a `sealed` section — tucked behind a spoiler in the read/export view.
+     Pairs with a Timeline (Tracks) for the true-vs-known sequence; clues can link out to
+     deep Clue/Evidence entries. ---- */
+  case: {
+    type: 'case', label: 'Case', plural: 'Cases', icon: '⌕', layout: 'hero', media: 'none',
+    title: { ph: 'Case name (e.g. The Cinderhall Murder)' }, subtitle: { ph: 'the crime / question (optional)' },
+    sections: [
+      { key: 'question', label: 'The question', type: 'richline', slot: 'main', lead: true },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Victim','Where','When','Investigator','Status'] },
+      { key: 'suspects', label: 'Suspects', type: 'suspects', slot: 'main' },
+      { key: 'clues', label: 'Clues & evidence', type: 'clues', slot: 'main' },
+      { key: 'timeline', label: 'Timeline', type: 'relations', slot: 'main', optional: true, display: 'expand', linkTypes: ['timeline'], addLabel: 'timeline' },
+      { key: 'investigation', label: 'The investigation', type: 'richsections', slot: 'main', optional: true },
+      { key: 'solution', label: 'The solution', type: 'richsections', slot: 'main', sealed: true, optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+  clue: {
+    type: 'clue', label: 'Clue / Evidence', plural: 'Clues', icon: '✧', layout: 'codex',
+    title: { ph: 'The evidence (e.g. The frost-rimed teacup)' }, subtitle: { ph: 'the case / kind (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside', optional: true },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Found','Status','Case'] },
+      { key: 'reveals', label: 'What it reveals', type: 'richsections', slot: 'main' },
+      { key: 'catch', label: 'The catch / misdirection', type: 'richsections', slot: 'main', optional: true },
+      { key: 'implicates', label: 'Implicates', type: 'relations', slot: 'main', display: 'expand', optional: true, linkTypes: ['character'], addLabel: 'suspect' },
+      { key: 'case', label: 'Part of case', type: 'relations', slot: 'main', optional: true, linkTypes: ['case'], addLabel: 'case' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   lore: {
@@ -160,6 +258,22 @@ export const TEMPLATES = {
     sections: [
       { key: 'logline', label: 'Logline', type: 'richline', slot: 'main', lead: true },
       { key: 'structure', label: 'Structure', type: 'outline', slot: 'main' },
+    ],
+  },
+
+  /* ---- timeline: a standalone chronology that aggregates dated beats across a whole
+     world or story (distinct from one Event, or the Research per-topic chronology). The
+     `timeline` field = era bands + collapsible beats; each beat links to Event/Character/
+     Place entries (auto-backlinks) and can be flagged a ★ key beat. Vertical Chronicle. ---- */
+  timeline: {
+    type: 'timeline', label: 'Timeline', plural: 'Timelines', icon: '◷', layout: 'hero', media: 'none',
+    title: { ph: 'Timeline name (e.g. History of the Ember Coast)' }, subtitle: { ph: 'scope / calendar (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Scope','Span','Calendar','Status'] },
+      { key: 'chronicle', label: 'Chronicle', type: 'timeline', slot: 'main' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
 
@@ -256,7 +370,7 @@ export const TEMPLATES = {
      Reuses the catalog (a source per card, its scale badge = per-source Reliability)
      and a header `meter` for overall confidence; adds the `ledger` field. ---- */
   research: {
-    type: 'research', label: 'Research', plural: 'Research', icon: '❡', layout: 'hero', media: 'feature',
+    type: 'research', label: 'Research', plural: 'Research', icon: '❡', layout: 'hero', media: 'feature', mediaToggle: true,
     title: { ph: 'Topic (e.g. Norman siege warfare)' }, subtitle: { ph: 'discipline / period (optional)' },
     sections: [
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
@@ -300,6 +414,57 @@ export const TEMPLATES = {
     ],
   },
 
+  /* ---- system / rules: how a magic system, technology, or institution works — and
+     what it COSTS. A codex (framework article + at-a-glance rail) that catalogs the
+     abilities within it, each linking out to a deep `power` entry (collection→deep,
+     like Flora→article). Craft spine is Sanderson-shaped: limitations > powers. The
+     `rulelist` field carries both the numbered Laws and the Can/Can’t consistency block. */
+  system: {
+    type: 'system', label: 'System / Rules', plural: 'Systems', icon: '§', layout: 'codex',
+    title: { ph: 'System name (e.g. Emberbinding)' }, subtitle: { ph: 'magic · technology · institution' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      /* aside rail */
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside', optional: true },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Source','Access','Trained at','Tiers','Status'] },
+      { key: 'gauges', label: 'At a glance', type: 'gauges', slot: 'aside', gaugeDefaults: [
+        { label: 'Hardness', levels: ['Soft','Mixed','Firm','Hard'] },
+        { label: 'Cost', levels: ['Free','Cheap','Steep','Dire'] },
+        { label: 'Prevalence', levels: ['Unique','Rare','Common','Ubiquitous'] },
+        { label: 'Scope', levels: ['Personal','Local','Regional','World'] },
+      ] },
+      /* framework article */
+      { key: 'howitworks', label: 'How it works', type: 'richsections', slot: 'main' },
+      { key: 'laws', label: 'The laws', type: 'rulelist', slot: 'main', variant: 'laws', optional: true },
+      { key: 'cancant', label: 'Can & can’t', type: 'rulelist', slot: 'main', variant: 'cancant', optional: true },
+      { key: 'limits', label: 'Limits & costs', type: 'richsections', slot: 'main', optional: true },
+      { key: 'access', label: 'Who wields it', type: 'richsections', slot: 'main', optional: true },
+      { key: 'consequences', label: 'Consequences', type: 'richsections', slot: 'main', optional: true },
+      /* the abilities within (full-width band) → deep Power entries */
+      { key: 'abilities', label: 'Abilities', type: 'catalog', slot: 'band', scale: 'Tier', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- power / ability: a single ability within a System — effect, tier, its cost &
+     drawbacks, who wields it, what counters it, and a mastery track for progression. ---- */
+  power: {
+    type: 'power', label: 'Power / Ability', plural: 'Powers', icon: '✷', layout: 'codex',
+    title: { ph: 'Ability name (e.g. Draw)' }, subtitle: { ph: 'system / discipline (optional)' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside', optional: true },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Tier','System','Cost','Discipline','Status'] },
+      { key: 'effect', label: 'Effect', type: 'richsections', slot: 'main' },
+      { key: 'drawbacks', label: 'Cost & drawbacks', type: 'richsections', slot: 'main', optional: true },
+      { key: 'mastery', label: 'Mastery', type: 'meter', slot: 'main', levels: ['Novice','Adept','Master'], optional: true },
+      { key: 'counters', label: 'Counters', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'wielders', label: 'Wielders', type: 'relations', slot: 'main', display: 'expand', optional: true, linkTypes: ['character'], addLabel: 'wielder' },
+      { key: 'partof', label: 'Part of', type: 'relations', slot: 'main', optional: true, linkTypes: ['system'], addLabel: 'system' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+
   /* ---- shared deep single-subject sheet: any catalog item can link out to one ---- */
   article: {
     type: 'article', label: 'Article', plural: 'Articles', icon: '◆', layout: 'split',
@@ -316,17 +481,17 @@ export const TEMPLATES = {
 };
 
 // Display order for the type picker / project view.
-export const ENTRY_TYPES = ['character','house','organization','realm','location','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','lore','item','research','source','article'];
+export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','lore','item','system','power','research','source','article'];
 
 // Type families — group the entry types for the project-view category filter + the
 // "New entry" picker. Source of truth for section order too (people → places → nature → culture → story → lore).
 export const FAMILIES = [
-  { key: 'people',  label: 'People',  types: ['character','house','organization'] },
+  { key: 'people',  label: 'People',  types: ['character','relationship','house','organization','species'] },
   { key: 'places',  label: 'Places',  types: ['realm','location','business','dwelling'] },
   { key: 'nature',  label: 'Nature',  types: ['flora','fauna'] },
   { key: 'culture', label: 'Culture', types: ['religion','beliefs','folklore','language'] },
-  { key: 'story',   label: 'Story',   types: ['event','plot'] },
-  { key: 'lore',    label: 'Lore',    types: ['lore','item','research','source','article'] },
+  { key: 'story',   label: 'Story',   types: ['event','plot','timeline','case','clue'] },
+  { key: 'lore',    label: 'Lore',    types: ['lore','item','system','power','research','source','article'] },
 ];
 
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
@@ -350,10 +515,21 @@ export function emptyValue(section){
     case 'sourcenotes': return { chapters: [] };
     case 'ledger': return [];
     case 'meter': return { levels: (section.levels || []).slice(), at: 0 };
+    case 'kind': return { id: '' };
+    case 'gauges': return [];
+    case 'timeline': return { eras: [], threads: [], entries: [], view: 'chronicle' };
+    case 'arc': return { type: 'positive', pos: null, believes: '', is: '', turn: '', learns: '', becomes: '', want: '', need: '' };
+    case 'rulelist': return [];
+    case 'dyad': return { a: { targetId: '', role: '' }, b: { targetId: '', role: '' }, dynamic: '', status: '', tension: '', sides: { a: { wants: '', fears: '', hides: '', sees: '' }, b: { wants: '', fears: '', hides: '', sees: '' } } };
+    case 'suspects': return [];
+    case 'clues': return [];
     case 'taggroups': return [];
     case 'excerpts': return [];
     case 'outline': return { acts: [] };
     case 'lineage': return { nodes: [] };
+    case 'familytree': return { people: [], unions: [] };
+    case 'history': return [];
+    case 'ties': return [];
     case 'allegianceweb': return [];
     case 'eventtimeline': return null;
     case 'spotify': return [];

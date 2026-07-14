@@ -38,6 +38,11 @@
   const p = $derived(curProject());
   const groups = $derived(entriesByType(p));
 
+  // card size (per-project preference): smaller cards = more per row = less scrolling
+  const SIZES = { sm: 132, md: 182, lg: 250 };
+  const cardMin = $derived(SIZES[p.cardSize] || SIZES.md);
+  function setSize(k){ p.cardSize = k; markDirty(); }
+
   // auto-grow the project title textarea so long names wrap instead of clipping
   let titleEl;
   function fitTitle(){ if (titleEl){ titleEl.style.height = 'auto'; titleEl.style.height = titleEl.scrollHeight + 'px'; } }
@@ -81,7 +86,7 @@
   async function del(e, id){ e.stopPropagation(); const entry = (p.entries || []).find(x => x.id === id); if (!(await confirmModal(`Delete “${entry?.title || 'this entry'}”?`))) return; deleteEntry(id); toast(`Moved “${entry?.title || 'entry'}” to trash`, { actionLabel: 'Undo', action: undo }); }
 </script>
 
-<div class="wrap">
+<div class="wrap" style="--card-min:{cardMin}px">
   <div class="hero">
     <div class="hleft">
       <div class="covwrap">
@@ -123,6 +128,11 @@
       {/each}
     </div>
     <div class="tbactions">
+      <div class="sizectl" role="group" aria-label="card size" title="card size">
+        <button class:on={(p.cardSize || 'md') === 'sm'} onclick={() => setSize('sm')} title="small cards" aria-label="small cards">S</button>
+        <button class:on={(p.cardSize || 'md') === 'md'} onclick={() => setSize('md')} title="medium cards" aria-label="medium cards">M</button>
+        <button class:on={(p.cardSize || 'md') === 'lg'} onclick={() => setSize('lg')} title="large cards" aria-label="large cards">L</button>
+      </div>
       <button class="selstart" onclick={startSelect} title="select sheets to export">☑ Select</button>
       <NewEntryMenu oncreate={addEntry} />
     </div>
@@ -224,6 +234,11 @@
   .cat .cc{font-family:var(--mono);font-size:.6rem;letter-spacing:.06em;color:var(--faint)}
   .cat.on .cc{color:var(--accent-soft)}
   .tbactions{display:flex;align-items:center;gap:10px}
+  .sizectl{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .sizectl button{font:inherit;font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;background:none;color:var(--muted);border:none;border-right:1px solid var(--rule);padding:6px 10px;cursor:pointer;line-height:1;min-width:26px}
+  .sizectl button:last-child{border-right:none}
+  .sizectl button:hover{color:var(--ink)}
+  .sizectl button.on{background:var(--panel-2);color:var(--accent-soft)}
   .selstart{font:inherit;font-size:.78rem;background:none;color:var(--muted);border:1px solid var(--rule);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
   .selstart:hover{border-color:var(--accent);color:var(--ink)}
   .typesec{margin:30px 0}
@@ -235,12 +250,12 @@
   .grouphd:hover{color:var(--ink);border-bottom-color:var(--line)}
   .chev{color:var(--accent-soft);font-size:.7rem;width:.9em;flex:none;display:inline-block}
   .gcount{color:var(--faint);font-size:.6rem;letter-spacing:.1em}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min,182px),1fr));gap:16px}
   @media(max-width:640px){
     .hleft{flex-direction:column;align-items:stretch;gap:14px}
     .covpick{width:100%;max-width:200px;height:auto;aspect-ratio:16/10;min-height:0}
     .htitle{width:100%}
-    .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(min(var(--card-min,182px),44vw),1fr));gap:12px}
   }
   .grid + .grouphd{margin-top:24px}
   .card{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}

@@ -39,6 +39,13 @@
     const t = themeFor();
     return paletteVars(palById(t.palette)) + fontVars(t.head, t.body, t.hs, t.bs, t.ps);
   });
+
+  // Start at the top whenever we navigate to a different view / entry / project —
+  // the window is the scroll container, so it otherwise keeps the previous offset.
+  $effect(() => {
+    void app.view; void app.entryId; void app.projectId;
+    window.scrollTo(0, 0);
+  });
 </script>
 
 <svelte:head>

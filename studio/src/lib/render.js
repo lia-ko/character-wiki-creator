@@ -4,10 +4,12 @@
    Powers both the in-app Preview and the .zip exporter. No Svelte, no editing. */
 
 import { esc, richToParas, richToLine } from './richtext.js';
+import { layoutFamily } from './familyLayout.js';
 import { templateFor, ENTRY_TYPES, FAMILIES } from './templates.js';
 import { coverOf, imgSrc, imgPos, bodySectionsOf } from './model.js';
 import { paletteVars, palById, fontVars, fontFaceCSS } from './theme.js';
 import { embedUrl, embedHeight } from './spotify.js';
+import { ARC_C, arcMode, effectiveGeom, arcLine, arcArea } from './arc.js';
 import { READER_CSS } from './exportcss.js';
 
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'sec';
@@ -76,6 +78,251 @@ function meterHTML(v, sec){
   const at = (v.at | 0);
   const label = sec && sec.label ? `<span class="mlabel">${esc(sec.label)}</span>` : '';
   return `<div class="meter">${label}<div class="mcells">${levels.map((l, i) => `<span class="mcell${i === at ? ' on' : ''}${i < at ? ' below' : ''}">${esc(l)}</span>`).join('')}</div></div>`;
+}
+// standalone Timeline (Chronicle): era bands → collapsible dated beats, each with an
+// inline expand-preview of its linked Event/Character/Place (Level-2 expand).
+function chronicleLinkHTML(l, ctx){
+  const id = l && l.targetId; if (!id) return '';
+  const title = esc((ctx.title && ctx.title(id)) || l.name || 'Untitled');
+  const m = ctx.meta ? ctx.meta(id) : null;
+  const typeLabel = m && m.type ? templateFor(m.type).label : '';
+  const href = ctx.href && ctx.href(id);
+  const cover = ctx.cover && ctx.cover(id);
+  const sum = m && m.summary ? richToLine(m.summary, ctx) : (m && m.subtitle ? esc(m.subtitle) : '');
+  const cov = cover ? `<span class="tlcov" style="background-image:url(${esc(cover)})"></span>` : `<span class="tlcov empty">◷</span>`;
+  const nameHTML = href ? `<a href="${esc(href)}">${title}</a>` : title;
+  const openA = href ? `<a class="tlopen" href="${esc(href)}">Open ↗</a>` : '';
+  return `<details class="tlink"><summary><span class="tlchip">${title}</span></summary><div class="tlcard">${cov}<div class="tlm">${typeLabel ? `<div class="tltype">${esc(typeLabel)}</div>` : ''}<div class="tlname">${nameHTML}</div>${sum ? `<div class="tlsum">${sum}</div>` : ''}</div>${openA}</div></details>`;
+}
+function chronicleNodeHTML(r, ctx){
+  const key = !!r.key;
+  const links = (r.links || []).map(l => chronicleLinkHTML(l, ctx)).join('');
+  const body = r.body ? richToParas(r.body, ctx) : '';
+  const dt = r.date ? `<span class="tldate">${esc(r.date)}</span>` : '';
+  const inner = body + (links ? `<div class="tllinks">${links}</div>` : '');
+  return `<details class="tlnode${key ? ' key' : ''}"${key ? ' open' : ''}><summary>${dt}<span class="tltitle">${esc(r.title || '—')}</span>${key ? '<span class="tlstar">★</span>' : ''}<span class="chev"></span></summary><div class="tlbody">${inner || '<p class="empty">—</p>'}</div></details>`;
+}
+function chronicleSpineHTML(v, ctx){
+  const eras = Array.isArray(v.eras) ? v.eras : [];
+  const entries = v.entries;
+  const spine = (list) => `<div class="tspine">${list.map(e => chronicleNodeHTML(e, ctx)).join('')}</div>`;
+  let out = '<div class="tline">';
+  if (eras.length){
+    const used = new Set();
+    for (const er of eras){
+      const mine = entries.filter(e => e.eraId === er.id);
+      if (!mine.length) continue;
+      mine.forEach(e => used.add(e));
+      out += `<div class="tera"><span class="ten">${esc(er.name || '')}</span>${er.span ? `<span class="tespan">${esc(er.span)}</span>` : ''}<span class="tel"></span></div>` + spine(mine);
+    }
+    const orphans = entries.filter(e => !used.has(e));
+    if (orphans.length) out += spine(orphans);
+  } else {
+    out += spine(entries);
+  }
+  return out + '</div>';
+}
+
+// short inline link chips (used by Tracks/Ledger, which stay compact)
+function tlLinkChips(links, ctx){
+  return (links || []).map(l => {
+    const id = l && l.targetId; if (!id) return '';
+    const nm = esc((ctx.title && ctx.title(id)) || l.name || '—');
+    const href = ctx.href && ctx.href(id);
+    return href ? `<a class="tchip" href="${esc(href)}">${nm}</a>` : `<span class="tchip">${nm}</span>`;
+  }).join('');
+}
+
+// B · Tracks — parallel threads on a shared time axis. Rows = distinct dates
+// (first-appearance order); columns = threads; unassigned beats fall into thread 1.
+function tracksHTML(v, ctx){
+  const threads = (Array.isArray(v.threads) ? v.threads : []).filter(t => t && t.id);
+  if (!threads.length) return chronicleSpineHTML(v, ctx);   // no lanes defined → degrade to Chronicle
+  const entries = v.entries;
+  const colOf = (e) => (threads.some(t => t.id === e.threadId) ? e.threadId : threads[0].id);
+  const rowKeys = [], seen = new Set();
+  for (const e of entries){ const k = (e.date || '—'); if (!seen.has(k)){ seen.add(k); rowKeys.push(k); } }
+  const gridCols = `64px repeat(${threads.length}, minmax(0,1fr))`;
+  let head = `<div class="tlh time">When</div>` + threads.map((t, i) => `<div class="tlh" style="--tc:${esc(t.color || 'var(--accent)')};box-shadow:inset 3px 0 var(--tc);color:var(--tc)">${esc(t.name || ('Thread ' + (i + 1)))}</div>`).join('');
+  let rows = '';
+  for (const rk of rowKeys){
+    rows += `<div class="tcell time">${esc(rk)}</div>`;
+    for (const t of threads){
+      const cellEvents = entries.filter(e => (e.date || '—') === rk && colOf(e) === t.id);
+      const inner = cellEvents.map(e => {
+        const chips = tlLinkChips(e.links, ctx);
+        return `<div class="tev" style="--tc:${esc(t.color || 'var(--accent)')}"><div class="tevt">${esc(e.title || '—')}${e.key ? '<span class="tevstar">★</span>' : ''}</div>${e.body ? `<div class="tevb">${richToLine(e.body, ctx)}</div>` : ''}${chips ? `<div class="tevlk">${chips}</div>` : ''}</div>`;
+      }).join('');
+      rows += `<div class="tcell">${inner}</div>`;
+    }
+  }
+  return `<div class="ttracks" style="grid-template-columns:${gridCols}">${head}${rows}</div>`;
+}
+
+// C · Era ledger — grouped scannable tables (date · event · who/where · weight dots).
+function ledgerRowsHTML(list, ctx){
+  return list.map(e => {
+    const who = tlLinkChips(e.links, ctx);
+    const w = Math.max(0, Math.min(4, e.weight | 0));
+    const dots = [0, 1, 2, 3].map(i => `<span class="${i < w ? 'on' : 'off'}">●</span>`).join('');
+    return `<div class="tlrow"><span class="tld">${esc(e.date || '')}</span><span class="tle">${esc(e.title || '—')}${e.key ? ' <span class="tlestar">★</span>' : ''}</span><span class="tlw">${who}</span><span class="tlsig">${dots}</span></div>`;
+  }).join('');
+}
+function ledgerTLHTML(v, ctx){
+  const eras = Array.isArray(v.eras) ? v.eras : [];
+  const entries = v.entries;
+  const colhead = `<div class="tlcolhead"><span>Date</span><span>Event</span><span>Who · where</span><span class="r">Weight</span></div>`;
+  const group = (name, span, list) => `<div class="tlg"><div class="tlgh"><span class="tlgn">${esc(name)}</span>${span ? `<span class="tlgspan">${esc(span)}</span>` : ''}<span class="tlgc">${list.length} entr${list.length === 1 ? 'y' : 'ies'}</span></div>${colhead}${ledgerRowsHTML(list, ctx)}</div>`;
+  let out = '<div class="tledger">';
+  if (eras.length){
+    const used = new Set();
+    for (const er of eras){
+      const mine = entries.filter(e => e.eraId === er.id);
+      if (!mine.length) continue;
+      mine.forEach(e => used.add(e));
+      out += group(er.name || '', er.span || '', mine);
+    }
+    const orphans = entries.filter(e => !used.has(e));
+    if (orphans.length) out += group('Unsorted', '', orphans);
+  } else {
+    out += group('All entries', '', entries);
+  }
+  return out + '</div>';
+}
+
+function chronicleHTML(v, ctx){
+  if (!v || !Array.isArray(v.entries) || !v.entries.length) return '';
+  if (v.view === 'tracks') return tracksHTML(v, ctx);
+  if (v.view === 'ledger') return ledgerTLHTML(v, ctx);
+  return chronicleSpineHTML(v, ctx);
+}
+// Character arc line — the refined transformation curve (shared geometry with the editor)
+function arcHTML(v, ctx, sec){
+  if (!v || typeof v !== 'object') return '';
+  const has = ['believes', 'is', 'turn', 'learns', 'becomes', 'want', 'need'].some(k => v[k] && String(v[k]).trim());
+  if (!has) return '';
+  const mode = (sec && sec.mode) || 'character';
+  const cfg = arcMode(mode);
+  const g = effectiveGeom(v, mode);
+  const uid = 'a' + Math.abs((JSON.stringify(v).length * 2654435761) % 100000);
+  const nl = (x, y, fill, t) => `<text x="${x}" y="${y}" text-anchor="middle" style="fill:${fill};font-family:var(--mono);font-size:10px;letter-spacing:1px">${esc(t)}</text>`;
+  const svg = `<svg class="arccurve" viewBox="0 0 640 220" preserveAspectRatio="none" role="img" aria-label="${esc(v.type || 'positive')} arc">`
+    + `<defs><linearGradient id="af-${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g.top}" stop-opacity=".16"/><stop offset="1" stop-color="${g.bottom}" stop-opacity=".05"/></linearGradient>`
+    + `<linearGradient id="al-${uid}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="${g.bottom}"/><stop offset=".5" stop-color="${ARC_C.accent}"/><stop offset="1" stop-color="${g.endColor}"/></linearGradient></defs>`
+    + `<line x1="90" y1="34" x2="620" y2="34" stroke="${ARC_C.rule}" stroke-dasharray="3 5"/><line x1="90" y1="186" x2="620" y2="186" stroke="${ARC_C.rule}" stroke-dasharray="3 5"/>`
+    + `<path d="${arcArea(g)}" fill="url(#af-${uid})"/><path d="${arcLine(g)}" fill="none" stroke="url(#al-${uid})" stroke-width="3.5" stroke-linecap="round"/>`
+    + `<line x1="90" y1="205" x2="600" y2="205" stroke="${ARC_C.want}" stroke-width="1.5" stroke-opacity=".45"/><path d="M600 205 l-9 -4 M600 205 l-9 4" fill="none" stroke="${ARC_C.want}" stroke-width="1.5" stroke-opacity=".65"/>`
+    + `<circle cx="${g.start.x}" cy="${g.start.y}" r="6.5" fill="${ARC_C.node}" stroke="${g.bottom}" stroke-width="3"/>`
+    + `<circle cx="${g.turn.x}" cy="${g.turn.y}" r="7" fill="${ARC_C.accent}" stroke="${ARC_C.node}" stroke-width="2"/>`
+    + `<circle cx="${g.end.x}" cy="${g.end.y}" r="6.5" fill="${g.endColor}" stroke="${ARC_C.node}" stroke-width="2"/>`
+    + nl(g.start.x, g.start.y - 12, ARC_C.muted, 'START')
+    + nl(g.turn.x, g.turn.y > 120 ? g.turn.y + 20 : g.turn.y - 12, ARC_C.accent, g.turnLabel)
+    + nl(g.end.x, g.end.y - 12, g.endColor, 'END')
+    + `</svg>`;
+  const row = (lbl, val, color) => val && val.trim() ? `<div class="arow"><div class="ak">${esc(lbl)}</div><div class="av"${color ? ` style="color:${color}"` : ''}>${esc(val)}</div></div>` : '';
+  const capRows = (arr) => arr.map(r => row(r.label, v[r.key], r.color === 'hi' ? g.top : r.color === 'lo' ? g.bottom : '')).join('');
+  const caps = `<div class="acaps">`
+    + `<div class="acap start" style="--ac:${g.bottom}"><div class="acph">${esc(cfg.startLabel)}</div>${capRows(cfg.start)}</div>`
+    + `<div class="acap turn"><div class="acph">${esc(cfg.turn.label)}</div>${row(cfg.turn.label, v[cfg.turn.key])}</div>`
+    + `<div class="acap end" style="--ac:${g.top}"><div class="acph">${esc(cfg.endLabel)}</div>${capRows(cfg.end)}</div>`
+    + `</div>`;
+  const forceHTML = cfg.forces.map(f => (v[f.key] && v[f.key].trim())
+    ? `<div class="aforce ${f.color}"><div class="afk">${esc(f.label)}${f.sub ? ' ' + esc(f.sub) : ''}</div><div class="afv">${esc(v[f.key])}</div><div class="afx">${esc(f.foot)}</div></div>` : '').join('');
+  const forces = forceHTML.trim() ? `<div class="aforces">${forceHTML}</div>` : '';
+  return `<div class="arcbox"><div class="arcchart"><span class="aax top" style="color:${g.top}">${esc(cfg.axisTop)}</span><span class="aax bot" style="color:${g.bottom}">${esc(cfg.axisBottom)}</span>${svg}</div>${caps}${forces}</div>`;
+}
+// relationship dyad — pairing header + central tension + mirrored his/her columns
+function dyadHTML(v, ctx){
+  if (!v || typeof v !== 'object') return '';
+  const a = v.a || {}, b = v.b || {}, sa = (v.sides && v.sides.a) || {}, sb = (v.sides && v.sides.b) || {};
+  const anyText = [v.dynamic, v.status, v.tension, a.role, b.role, sa.wants, sa.fears, sa.hides, sa.sees, sb.wants, sb.fears, sb.hides, sb.sees].some(x => x && String(x).trim());
+  if (!a.targetId && !b.targetId && !anyText) return '';
+  const nameOf = (id) => (ctx.title && ctx.title(id)) || '';
+  const who = (p, side) => {
+    const nm = nameOf(p.targetId);
+    const cover = p.targetId && ctx.cover && ctx.cover(p.targetId);
+    const href = p.targetId && ctx.href && ctx.href(p.targetId);
+    const av = cover ? `<span class="dav" style="background-image:url(${esc(cover)})"></span>` : `<span class="dav empty">${esc((nm || '?').slice(0, 1))}</span>`;
+    const label = nm ? (href ? `<a href="${esc(href)}">${esc(nm)}</a>` : esc(nm)) : (side === 'a' ? 'Person A' : 'Person B');
+    return `<div class="dwho ${side}">${av}<span class="dwm"><span class="dnm">${label}</span>${p.role ? `<span class="drl">${esc(p.role)}</span>` : ''}</span></div>`;
+  };
+  const bond = `<div class="dbond"><span class="dlink">↔</span>${v.dynamic ? `<span class="ddyn">${esc(v.dynamic)}</span>` : ''}${v.status ? `<span class="dstatus">${esc(v.status)}</span>` : ''}</div>`;
+  const head = `<div class="dhead">${who(a, 'a')}${bond}${who(b, 'b')}</div>`;
+  const tension = v.tension && v.tension.trim() ? `<div class="dtension"><div class="dtl">The tension</div><p>${esc(v.tension)}</p></div>` : '';
+  const ROWS = [['wants', 'Wants from them'], ['fears', 'Fears'], ['hides', 'Won’t admit'], ['sees', 'Sees them as']];
+  const sideHTML = (p, s, side) => {
+    const rows = ROWS.filter(([k]) => s[k] && s[k].trim()).map(([k, lbl]) => `<div class="drow"><div class="dk">${lbl}</div><div class="dv">${esc(s[k])}</div></div>`).join('');
+    if (!rows && !p.targetId) return '';
+    return `<div class="dside ${side}"><div class="dsh">${esc(nameOf(p.targetId) || (side === 'a' ? 'Person A' : 'Person B'))}<span>· their side</span></div>${rows}</div>`;
+  };
+  const sa2 = sideHTML(a, sa, 'a'), sb2 = sideHTML(b, sb, 'b');
+  const sides = (sa2 || sb2) ? `<div class="dsides">${sa2}${sb2}</div>` : '';
+  return `<div class="dyad">${head}${tension}${sides}</div>`;
+}
+// case suspects grid — motive/means/opportunity/alibi(+status)/suspicion. The guilty flag is
+// writer-only and is NOT rendered here (the reveal lives in the sealed solution).
+const ALIBI_LABEL = { ok: 'confirmed', unc: 'unconfirmed', broken: 'broken' };
+function suspectsHTML(list, ctx){
+  if (!Array.isArray(list) || !list.length) return '';
+  const rows = list.map(r => {
+    const nm = (r.targetId && ctx.title && ctx.title(r.targetId)) || r.name || 'Unknown';
+    const href = r.targetId && ctx.href && ctx.href(r.targetId);
+    const name = href ? `<a href="${esc(href)}">${esc(nm)}</a>` : esc(nm);
+    const st = r.alibiStatus && ALIBI_LABEL[r.alibiStatus] ? `<span class="astat ${r.alibiStatus}">${ALIBI_LABEL[r.alibiStatus]}</span>` : '';
+    const alibi = (r.alibi || st) ? `${esc(r.alibi || '')} ${st}` : '';
+    const s = Math.max(0, Math.min(4, r.suspicion | 0));
+    const pips = [0, 1, 2, 3].map(i => `<i class="${i < s ? 'on' : ''}"></i>`).join('');
+    return `<tr><td class="sn">${name}</td><td>${esc(r.motive || '')}</td><td>${esc(r.means || '')}</td><td>${esc(r.opportunity || '')}</td><td class="al">${alibi}</td><td><span class="spips">${pips}</span></td></tr>`;
+  }).join('');
+  return `<div class="suspwrap"><table class="susptbl"><thead><tr><th>Suspect</th><th>Motive</th><th>Means</th><th>Opportunity</th><th>Alibi</th><th>Suspicion</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+// case clues — two-faced cards (reads-as vs means · genuine/red-herring · implicates · planted)
+function cluesHTML(list, ctx){
+  if (!Array.isArray(list) || !list.length) return '';
+  return `<div class="cluelist">` + list.map(r => {
+    const herring = r.kind === 'herring';
+    const badge = herring ? `<span class="clh">✕ red herring</span>` : `<span class="clg">genuine</span>`;
+    const link = r.targetId && ctx.href && ctx.href(r.targetId);
+    const title = link ? `<a href="${esc(link)}">${esc(r.name || 'Clue')}</a>` : esc(r.name || 'Clue');
+    const faces = (r.reads || r.means)
+      ? `<div class="clfaces">${r.reads ? `<div class="clface reads"><div class="clk">Reads as</div><div class="clv">${esc(r.reads)}</div></div>` : ''}${r.means ? `<div class="clface means"><div class="clk">Actually means</div><div class="clv">${esc(r.means)}</div></div>` : ''}</div>` : '';
+    const impNm = r.implicates && ctx.title && ctx.title(r.implicates);
+    const impHref = r.implicates && ctx.href && ctx.href(r.implicates);
+    const foot = [];
+    if (impNm) foot.push(`<span><b>implicates</b> ${impHref ? `<a href="${esc(impHref)}">${esc(impNm)}</a>` : esc(impNm)}</span>`);
+    if (r.planted && r.planted.trim()) foot.push(`<span><b>planted</b> ${esc(r.planted)}</span>`);
+    const footHTML = foot.length ? `<div class="clfoot">${foot.join('')}</div>` : '';
+    return `<div class="cluecard${herring ? ' herring' : ''}"><div class="clt">${title} ${badge}</div>${faces}${footHTML}</div>`;
+  }).join('') + `</div>`;
+}
+// system rules — the numbered Laws, or the Can/Can't consistency block (one field, two variants)
+function rulelistHTML(list, sec){
+  if (!Array.isArray(list)) return '';
+  const items = list.filter(r => r && r.text && r.text.trim());
+  if (!items.length) return '';
+  if ((sec && sec.variant) === 'cancant'){
+    const can = items.filter(r => r.kind !== 'cant'), cant = items.filter(r => r.kind === 'cant');
+    const col = (h, arr, cls) => arr.length ? `<div class="rcc ${cls}"><div class="rcch">${h}</div><ul>${arr.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul></div>` : '';
+    return `<div class="rcancant">${col('✓ It can', can, 'can')}${col('✕ It can’t', cant, 'cant')}</div>`;
+  }
+  return `<ol class="rlaws">${items.map(r => `<li>${esc(r.text)}</li>`).join('')}</ol>`;
+}
+function kindHTML(v){
+  if (!v || !v.id) return '';
+  const genre = v.genre ? `<span class="kgenre">${esc(v.genre.split(' · ')[0])}</span>` : '';
+  return `<div class="kindchip"><span class="klabel">${esc(v.label || '')}</span>${genre}</div>`;
+}
+function gaugesHTML(list){
+  if (!Array.isArray(list) || !list.length) return '';
+  const tiles = list.map(g => {
+    if (g.text){ if (!g.value) return ''; return `<div class="gtile"><div class="gl">${esc(g.label || '')}</div><div class="gv">${esc(g.value)}</div></div>`; }
+    const levels = Array.isArray(g.levels) ? g.levels : []; if (!levels.length) return '';
+    const at = (g.at | 0);
+    const pips = levels.map((l, i) => `<span class="gpip${i <= at ? ' on' : ''}"></span>`).join('');
+    return `<div class="gtile"><div class="gl">${esc(g.label || '')}</div><div class="gpips">${pips}</div><div class="gnow">${esc(levels[at] || '')}</div></div>`;
+  }).join('');
+  if (!tiles.trim()) return '';
+  return `<div class="gauges">${tiles}</div>`;
 }
 // source notes: chapter spine → typed notes + placeable plates
 const NOTE_META = {
@@ -203,6 +450,53 @@ function outlineHTML(o){
   if (!acts.length) return '<p class="empty">No structure yet.</p>';
   return `<div class="outline">` + acts.map(a => `<div class="act"><div class="at">${esc(a.title || 'Act')}</div>` + (a.chapters || []).map(ch => `<div class="chap"><div class="ct">${esc(ch.title || 'Chapter')}</div>` + (ch.beats || []).map(bt => `<div class="beat"><span class="dot">•</span> ${esc(bt.text || '')}</div>`).join('') + `</div>`).join('') + `</div>`).join('') + `</div>`;
 }
+// history: a vertical, buildable timeline (era/date · title · description)
+function historyHTML(list, ctx){
+  if (!list || !list.length) return '<p class="empty">No history yet.</p>';
+  const rows = list.map(r => {
+    if (!(r.date && r.date.trim()) && !(r.title && r.title.trim()) && !(r.body && r.body.trim())) return '';
+    return `<div class="vnode${r.key ? ' key' : ''}"><div class="vdate">${esc(r.date || '—')}</div><div class="vb">${r.title ? `<h4>${esc(r.title)}</h4>` : ''}${richToParas(r.body, ctx)}</div></div>`;
+  }).join('');
+  return rows ? `<div class="vtl">${rows}</div>` : '<p class="empty">No history yet.</p>';
+}
+// ties: relations with other groups (linked, colour-keyed by kind)
+const TIE_KINDS = { ally: { l: 'Ally', c: '#5aa06f' }, enemy: { l: 'Enemy', c: '#c05348' }, rival: { l: 'Rival', c: '#b9853a' }, wary: { l: 'Wary', c: '#b9853a' }, kin: { l: 'Kin', c: '#5f8fb0' }, patron: { l: 'Patron', c: '#5f8fb0' }, subject: { l: 'Subject', c: '#9aa1a8' }, other: { l: 'Tie', c: '#9aa1a8' } };
+function tiesHTML(list, ctx){
+  if (!list || !list.length) return '<p class="empty">No ties yet.</p>';
+  const cards = list.map(r => {
+    if (!(r.name && r.name.trim()) && !r.targetId) return '';
+    const t = TIE_KINDS[r.kind] || TIE_KINDS.other;
+    const h = r.targetId && ctx.href && ctx.href(r.targetId);
+    const nm = esc(r.name || (ctx.title && ctx.title(r.targetId)) || '—');
+    const name = h ? `<a href="${esc(h)}">${nm}</a>` : nm;
+    const note = r.note && r.note.trim() ? `<span class="tn">${esc(r.note)}</span>` : '';
+    return `<div class="tie" style="--tc:${t.c}"><span class="tg">${name}</span><span class="tt">${t.l}</span>${note}</div>`;
+  }).join('');
+  return cards ? `<div class="tiegrid">${cards}</div>` : '<p class="empty">No ties yet.</p>';
+}
+// family tree: auto-laid-out structured genealogy chart (static SVG)
+function familyTreeHTML(data, ctx){
+  if (!data || !((data.people) || []).length) return '<p class="empty">No family recorded.</p>';
+  const L = layoutFamily(data), NW = L.NW, NH = L.NH, pos = L.pos;
+  let wires = '', bars = '', marks = '', nodes = '';
+  (L.marrs || []).forEach(m => { const A = pos[m.a], B = pos[m.b]; if (!A || !B) return;
+    const Lf = A.x < B.x ? A : B, R = A.x < B.x ? B : A, y = Lf.y + NH / 2;
+    bars += `<path class="fmarr${m.kind === 'affair' ? ' affair' : ''}" d="M ${Lf.x + NW} ${y} L ${R.x} ${y}"/>`;
+    marks += `<text class="fmlbl" x="${(Lf.x + NW + R.x) / 2}" y="${y - 6}">${m.kind === 'affair' ? '~' : 'm'}</text>`; });
+  (L.links || []).forEach(k => { const ps = k.parents.map(p => pos[p]).filter(Boolean), cs = k.children.map(c => pos[c]).filter(Boolean);
+    if (!ps.length || !cs.length) return;
+    const jx = ps.reduce((a, p) => a + p.x + NW / 2, 0) / ps.length, py = Math.max(...ps.map(p => p.y)) + NH / 2;
+    const cxs = cs.map(c => c.x + NW / 2), cy = Math.min(...cs.map(c => c.y)), bus = cy - 30;
+    wires += `<path class="fwire" d="M ${jx} ${py} L ${jx} ${bus}"/><path class="fwire" d="M ${Math.min(...cxs)} ${bus} L ${Math.max(...cxs)} ${bus}"/>`;
+    cxs.forEach(cx => { wires += `<path class="fwire" d="M ${cx} ${bus} L ${cx} ${cy}"/>`; }); });
+  L.nodes.forEach(n => { const s = (n.name || '').indexOf(' ');
+    const first = esc(s < 0 ? (n.name || '—') : n.name.slice(0, s)), sur = s < 0 ? '' : esc(n.name.slice(s + 1));
+    const inner = `<g class="fnode" transform="translate(${n.x} ${n.y})"><rect width="${NW}" height="${NH}" rx="8"/><text class="fnm" x="${NW / 2}" y="22">${first}</text>${sur ? `<text class="fsur" x="${NW / 2}" y="39">${sur}</text>` : ''}</g>`;
+    const h = n.targetId && ctx.href && ctx.href(n.targetId);
+    nodes += h ? `<a href="${esc(h)}">${inner}</a>` : inner; });
+  const vbw = Math.round(L.width + 80), vbh = Math.round(L.height + 80);
+  return `<div class="famwrap"><svg class="fam" viewBox="-40 -40 ${vbw} ${vbh}" preserveAspectRatio="xMidYMid meet" style="max-width:${Math.min(vbw, 980)}px">${wires}${bars}${marks}${nodes}</svg></div>`;
+}
 function lineageHTML(d, ctx){
   const nodes = (d && d.nodes) || [];
   if (!nodes.length) return '<p class="empty">No lineage yet.</p>';
@@ -255,6 +549,14 @@ function fieldHTML(entry, sec, ctx){
     case 'relations': return relationsHTML(v, sec, ctx);
     case 'catalog': return catalogHTML(v, ctx);
     case 'meter': return meterHTML(v, sec);
+    case 'kind': return kindHTML(v);
+    case 'gauges': return gaugesHTML(v);
+    case 'timeline': return chronicleHTML(v, ctx);
+    case 'arc': return arcHTML(v, ctx, sec);
+    case 'rulelist': return rulelistHTML(v, sec);
+    case 'dyad': return dyadHTML(v, ctx);
+    case 'suspects': return suspectsHTML(v, ctx);
+    case 'clues': return cluesHTML(v, ctx);
     case 'references': return referencesHTML(v);
     case 'deflist': return deflistHTML(v, sec);
     case 'lexicon': return lexiconHTML(v);
@@ -265,6 +567,9 @@ function fieldHTML(entry, sec, ctx){
     case 'excerpts': return excerptsHTML(v, ctx);
     case 'outline': return outlineHTML(v);
     case 'lineage': return lineageHTML(v, ctx);
+    case 'familytree': return familyTreeHTML(v, ctx);
+    case 'history': return historyHTML(v, ctx);
+    case 'ties': return tiesHTML(v, ctx);
     case 'allegianceweb': return webHTML(v, entry, ctx);
     case 'eventtimeline': return timelineHTML(entry, ctx);
     case 'spotify': return spotifyHTML(v);
@@ -313,19 +618,26 @@ function backlinksHTML(backlinks, ctx){
 
 export function renderEntry(entry, ctx){
   const tpl = templateFor(entry.type);
-  const layout = tpl.layout || 'infobox';
+  // media-toggle templates pick their format per entry: Side → character `split`, Top → location `hero`.
+  let layout = tpl.layout || 'infobox';
+  if (tpl.mediaToggle) layout = (entry.mediaPos || 'side') === 'side' ? 'split' : 'hero';
   const gallerySec = tpl.sections.find(s => s.type === 'gallery');
   const statsSec = tpl.sections.find(s => s.type === 'stats');
   const bodySecs = bodySectionsOf(entry);
-  // build the body, injecting a zone divider before the first non-empty section of each zone
-  let body = '', lastZone = null;
+  // build the body, injecting a zone divider before the first non-empty section of each zone;
+  // `band`-slot sections are collected separately to render full-width below the columns
+  let body = '', bandInner = '', lastZone = null;
   for (const sec of bodySecs){
     const inner = fieldHTML(entry, sec, ctx);
     if (!inner) continue;
+    // `sealed` sections (e.g. a Case's solution) tuck behind a spoiler in the read/export view
+    if (sec.sealed){ body += `<details class="sealed"><summary>⚠ ${esc(sec.label)} — unseal</summary><div class="sealedb">${inner}</div></details>`; continue; }
+    if (sec.slot === 'band'){ bandInner += heading(sec, inner); continue; }
     if (sec.zone && sec.zone !== lastZone){ body += `<div class="zonebar"><span class="zt">${esc(sec.zone)}</span><span class="zl"></span></div>`; lastZone = sec.zone; }
     body += heading(sec, inner);
   }
   body += backlinksHTML(ctx.backlinks, ctx);
+  const bandsHTML = bandInner ? `<div class="bands">${bandInner}</div>` : '';
   const title = `<div class="etitle"><h1>${esc(entry.title || 'Untitled')}</h1>${entry.subtitle ? (tpl.motto ? `<div class="words"><span>${esc(entry.subtitle)}</span></div>` : `<div class="esub">${esc(entry.subtitle)}</div>`) : ''}</div>`;
   const stats = statsSec ? fieldHTML(entry, statsSec, ctx) : '';
   const gal = gallerySec ? fieldHTML(entry, gallerySec, ctx) : '';
@@ -341,6 +653,16 @@ export function renderEntry(entry, ctx){
     else if (tpl.media === 'sigil') head = `<div class="herohead">${gal ? `<div class="sig">${gal}</div>` : ''}${title}</div>`;
     else head = title;
     main = `<div class="whero">${head}${stats}${body}</div>`;
+  } else if (layout === 'codex'){
+    // article in the main column; the aside rail renders every non-hidden aside section as a titled
+    // widget (the composable infobox), in the reader's chosen order (entry.asideOrder)
+    const asideList = tpl.sections.filter(s => s.slot === 'aside' && !(entry.hidden || []).includes(s.key));
+    if (entry.asideOrder && entry.asideOrder.length){ const oi = k => { const i = entry.asideOrder.indexOf(k); return i === -1 ? Infinity : i; }; asideList.sort((a, b) => oi(a.key) - oi(b.key)); }
+    const rail = asideList.map(sec => {
+      const inner = fieldHTML(entry, sec, ctx); if (!inner) return '';
+      return `<div class="railw"><div class="rwh">${esc(sec.label)}</div>${inner}</div>`;
+    }).join('');
+    main = `<div class="wbody"><main class="article">${title}${body}</main><aside class="infobox codexrail">${rail}</aside></div>${bandsHTML}`;
   } else {
     main = `<div class="wbody"><main class="article">${title}${body}</main><aside class="infobox">${gal}${stats}</aside></div>`;
   }

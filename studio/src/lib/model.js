@@ -45,7 +45,13 @@ export function projectEvents(project){
 export function createEntry(type, name){
   const tpl = templateFor(type);
   const data = {};
-  tpl.sections.forEach(sec => { data[sec.key] = emptyValue(sec); });
+  tpl.sections.forEach(sec => {
+    data[sec.key] = emptyValue(sec);
+    // pre-seed at-a-glance meters from a section's gaugeDefaults (e.g. System's Hardness/Cost/…)
+    if (sec.type === 'gauges' && Array.isArray(sec.gaugeDefaults)){
+      data[sec.key] = sec.gaugeDefaults.map(g => g.text ? { label: g.label, text: true, value: '' } : { label: g.label, levels: (g.levels || []).slice(), at: 0 });
+    }
+  });
   const entry = { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', group: '', data };
   // sections flagged `optional` start hidden — the entry opens on a lean core, the rest
   // are added on demand from the "＋ Add section" menu (which lists them under their zone).

@@ -7,9 +7,12 @@ import { coverOf, backlinksFor, projectEvents } from './model.js';
 
 // Build the per-project lookups ONCE, then reuse across every entry in that project.
 export function readerMaps(project){
-  const cover = {}, title = {};
-  (project.entries || []).forEach(e => { cover[e.id] = coverOf(e); title[e.id] = e.title; });
-  return { cover, title, events: projectEvents(project) };
+  const cover = {}, title = {}, meta = {};
+  (project.entries || []).forEach(e => {
+    cover[e.id] = coverOf(e); title[e.id] = e.title;
+    meta[e.id] = { type: e.type, subtitle: e.subtitle || '', summary: (e.data && e.data.summary) || '' };
+  });
+  return { cover, title, meta, events: projectEvents(project) };
 }
 
 // Assemble a ctx from prebuilt maps. `project` is the real project (for backlinks); pass
@@ -19,6 +22,7 @@ export function baseCtx(project, maps, { href, hubHref = null, currentId = null,
     href: href || (() => null),
     cover: (id) => maps.cover[id] || null,
     title: (id) => (maps.title[id] != null ? maps.title[id] : null),
+    meta: (id) => (maps.meta ? maps.meta[id] || null : null),
     events: maps.events,
     hubHref,
     crumb: project.name,

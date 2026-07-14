@@ -3,6 +3,7 @@
   import { dismissable } from '../lib/dismissable.js';
   import { templateFor } from '../lib/templates.js';
   import { coverOf, backlinksFor, ensureEntryData, bodySectionsOf } from '../lib/model.js';
+  import { suggestedSections } from '../lib/kinds.js';
   import { exportSingleEntry } from '../lib/exportentry.js';
 
   let exporting = $state(false);
@@ -31,24 +32,56 @@
   const project = $derived(curProject());
   const entry = $derived(curEntry());
   const tpl = $derived(entry ? templateFor(entry.type) : null);
-  const layout = $derived(tpl?.layout || 'infobox');
+  // media-toggle templates select their layout FORMAT per entry: Side reuses the
+  // character `split` format, Top reuses the location/business `hero` (feature) format.
+  const layout = $derived.by(() => {
+    const base = tpl?.layout || 'infobox';
+    if (tpl?.mediaToggle) return (entry?.mediaPos || 'side') === 'side' ? 'split' : 'hero';
+    return base;
+  });
 
   const others = $derived((project?.entries || []).filter(e => e.id !== entry?.id).map(e => ({ id: e.id, title: e.title, type: e.type, cover: coverOf(e) })));
 
   // existing group labels in this project, for the group autocomplete
   const groupOptions = $derived([...new Set((project?.entries || []).map(e => (e.group || '').trim()).filter(Boolean))].sort());
 
+  // per-entry image placement (templates with mediaToggle) — defaults to the side rail
+  const mediaSide = $derived((entry?.mediaPos || 'side') === 'side');
+  function setMediaPos(p){ if (entry){ entry.mediaPos = p; markDirty(); } }
+
   const gallerySec = $derived(tpl?.sections.find(s => s.type === 'gallery') || null);
   const statsSec = $derived(tpl?.sections.find(s => s.type === 'stats') || null);
+  // codex layout: the rail is every non-hidden aside-slot section (the composable infobox),
+  // ordered by the per-entry asideOrder so widgets can be reordered
+  const asideSecs = $derived.by(() => {
+    if (!tpl || !entry) return [];
+    const secs = tpl.sections.filter(s => s.slot === 'aside' && !(entry.hidden || []).includes(s.key));
+    const ord = entry.asideOrder;
+    if (!ord || !ord.length) return secs;
+    const idx = k => { const i = ord.indexOf(k); return i === -1 ? Infinity : i; };
+    return secs.slice().sort((a, b) => idx(a.key) - idx(b.key));
+  });
+  const hiddenAside = $derived(tpl && entry ? tpl.sections.filter(s => s.slot === 'aside' && (entry.hidden || []).includes(s.key)) : []);
+  let railMenu = $state(false);
+  function moveAside(key, dir){
+    const cur = asideSecs.map(s => s.key); const i = cur.indexOf(key), j = i + dir;
+    if (i < 0 || j < 0 || j >= cur.length) return;
+    [cur[i], cur[j]] = [cur[j], cur[i]]; entry.asideOrder = cur; markDirty();
+  }
   const bodySecs = $derived(entry ? bodySectionsOf(entry) : []);
+  // `band`-slot sections render full-width below the columns (codex); the rest are the article body
+  const mainSecs = $derived(bodySecs.filter(s => s.slot !== 'band'));
+  const bandSecs = $derived(bodySecs.filter(s => s.slot === 'band'));
   const hiddenSecs = $derived(tpl && entry?.hidden?.length ? tpl.sections.filter(s => s.slot !== 'aside' && !s.lead && entry.hidden.includes(s.key)) : []);
   // addable (currently-hidden template) sections, grouped by their zone for the add menu
   const addableGroups = $derived.by(() => {
     const groups = [], byZone = {};
-    for (const s of hiddenSecs){ const z = s.zone || 'More sections'; if (!byZone[z]){ byZone[z] = []; groups.push(z); } byZone[z].push(s); }
+    for (const s of hiddenSecs){ const z = s.zone || (s.slot === 'aside' ? 'Infobox blocks' : 'More sections'); if (!byZone[z]){ byZone[z] = []; groups.push(z); } byZone[z].push(s); }
     return groups.map(z => ({ zone: z, secs: byZone[z] }));
   });
   const backlinks = $derived(entry ? backlinksFor(entry, project) : []);
+  // sections the current Kind suggests — highlighted in the Add menu (green in the mock)
+  const suggested = $derived(entry ? suggestedSections(entry) : new Set());
 
   // add / remove custom sections (headings) on this entry
   let secMenu = $state(false);
@@ -80,6 +113,13 @@
     </label>
     <datalist id="entry-groups">{#each groupOptions as g}<option value={g}></option>{/each}</datalist>
     <span class="grow"></span>
+    {#if tpl.mediaToggle && gallerySec}
+      <span class="mtoggle" title="where the image sits">
+        <span class="mtl">Image</span>
+        <button class:on={!mediaSide} onclick={() => setMediaPos('top')}>Top</button>
+        <button class:on={mediaSide} onclick={() => setMediaPos('side')}>Side</button>
+      </span>
+    {/if}
     <button class="expbtn" onclick={exportSheet} disabled={exporting}>{exporting ? 'Exporting…' : 'Export ↓'}</button>
     <button class="pvbtn btn-primary" onclick={previewEntry}>Preview ↗</button>
   </div>
@@ -87,8 +127,8 @@
   {#key entry.id}
     <!-- section list: template sections + per-entry custom sections, then the add control -->
     {#snippet bodyList()}
-      {#each bodySecs as sec, i (sec.key)}
-        {#if sec.zone && sec.zone !== bodySecs[i - 1]?.zone}
+      {#each mainSecs as sec, i (sec.key)}
+        {#if sec.zone && sec.zone !== mainSecs[i - 1]?.zone}
           <div class="zonebar"><span class="zt">{sec.zone}</span><span class="zl"></span></div>
         {/if}
         {#if sec.lead}
@@ -123,7 +163,7 @@
               {#each addableGroups as g}
                 <div class="addlabel">{g.zone}</div>
                 {#each g.secs as s}
-                  <button class="addopt" onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>section</small></button>
+                  <button class="addopt" class:suggested={suggested.has(s.key)} onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>{suggested.has(s.key) ? 'suggested' : 'section'}</small></button>
                 {/each}
               {/each}
               <div class="addsep"></div>
@@ -177,6 +217,56 @@
         {@render bodyList()}
       </div>
 
+    <!-- ============ CODEX (species) — article + composable infobox rail ============ -->
+    {:else if layout === 'codex'}
+      <div class="wbody">
+        <main class="article">
+          <EntryTitle {entry} {tpl} />
+          {@render bodyList()}
+        </main>
+        <aside class="infobox codexrail">
+          {#each asideSecs as sec, i (sec.key)}
+            <div class="railw">
+              <div class="rwh"><span>{sec.label}</span>
+                <span class="rwctl">
+                  <button class="rwm" onclick={() => moveAside(sec.key, -1)} disabled={i === 0} title="move up">▲</button>
+                  <button class="rwm" onclick={() => moveAside(sec.key, 1)} disabled={i === asideSecs.length - 1} title="move down">▼</button>
+                  {#if sec.optional}<button class="rwx" onclick={() => hideSection(entry, sec)} title="remove from infobox">✕</button>{/if}
+                </span>
+              </div>
+              <Field {entry} {sec} {others} />
+            </div>
+          {/each}
+          {#if hiddenAside.length}
+            <div class="railadd" use:dismissable={() => railMenu = false}>
+              <button class="railaddbtn" onclick={() => railMenu = !railMenu}>＋ Add block</button>
+              {#if railMenu}
+                <div class="addmenu">
+                  <div class="addlabel">Infobox blocks</div>
+                  {#each hiddenAside as s}
+                    <button class="addopt" class:suggested={suggested.has(s.key)} onclick={() => { restoreSection(entry, s.key); railMenu = false; }}><span>{s.label}</span><small>{suggested.has(s.key) ? 'suggested' : 'block'}</small></button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </aside>
+      </div>
+      {#if bandSecs.length}
+        <div class="bands">
+          {#each bandSecs as sec (sec.key)}
+            <div class="secwrap"><h2>{sec.label}</h2>
+              <div class="seccc onhover">
+                <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move up">▲</button>
+                <button class="csmv" onclick={() => moveSection(entry, sec.key, 1)} title="move down">▼</button>
+                <button class="csx" onclick={() => hideSection(entry, sec)} title="remove section">✕</button>
+              </div>
+            </div>
+            <Field {entry} {sec} {others} />
+          {/each}
+        </div>
+      {/if}
+
     <!-- ============ INFOBOX (lore) ============ -->
     {:else}
       <div class="wbody">
@@ -223,6 +313,12 @@
   .grpin::placeholder{color:var(--faint)}
   .grow{flex:1}
   .pvbtn{font:inherit;font-size:.74rem;border-radius:7px;padding:6px 13px}
+  .mtoggle{display:inline-flex;align-items:center;gap:6px}
+  .mtoggle .mtl{font-family:var(--mono);font-size:.54rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .mtoggle button{font:inherit;font-size:.68rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);padding:5px 10px;cursor:pointer;border-radius:0}
+  .mtoggle button:first-of-type{border-radius:7px 0 0 7px}
+  .mtoggle button:last-of-type{border-radius:0 7px 7px 0;border-left:none}
+  .mtoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .expbtn{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .expbtn:hover{border-color:var(--accent)}
   .expbtn:disabled{opacity:.6;cursor:default}
@@ -265,6 +361,8 @@
   .addopt:hover{background:var(--panel-2)}
   .addopt span{font-family:var(--sans);font-size:.84rem}
   .addopt small{font-family:var(--mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .addopt.suggested span{color:var(--ok,#4aa579)}
+  .addopt.suggested small{color:var(--ok,#4aa579)}
 
   /* outline (plot) */
   .wrap-narrow{max-width:760px;margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:10px}
@@ -283,6 +381,22 @@
   .article{padding:26px 0;min-width:0;display:flex;flex-direction:column;gap:10px}
   .infobox{padding:26px 0;display:flex;flex-direction:column;gap:10px}
   .ib-h{font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:8px 0 -2px}
+  /* codex rail widgets */
+  .codexrail .railw{margin-bottom:16px}
+  .codexrail .rwh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .codexrail .rwctl{display:flex;align-items:center;gap:4px;opacity:0;transition:opacity .12s}
+  .codexrail .railw:hover .rwctl,.codexrail .rwctl:focus-within{opacity:1}
+  .codexrail .rwm{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:5px;cursor:pointer;padding:2px 5px;font-size:.5rem;line-height:1}
+  .codexrail .rwm:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
+  .codexrail .rwm:disabled{opacity:.35;cursor:default}
+  .codexrail .rwx{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);cursor:pointer;font-size:.62rem;line-height:1;border-radius:5px;padding:2px 6px}
+  .codexrail .rwx:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .codexrail .railadd{position:relative;margin-top:4px}
+  .codexrail .railaddbtn{width:100%;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:8px;cursor:pointer;font-family:var(--sans);font-size:.78rem}
+  .codexrail .railaddbtn:hover{border-color:var(--accent);color:var(--ink)}
+  /* full-width bands (below the codex columns) */
+  .bands{max-width:1140px;margin:8px auto 0;padding:0 26px;display:flex;flex-direction:column;gap:4px}
+  @media(max-width:640px){ .bands{padding:0 14px} }
 
   /* backlinks ("Linked from") */
   .backrefs{max-width:900px;margin:8px auto 0;padding:8px 26px 90px}

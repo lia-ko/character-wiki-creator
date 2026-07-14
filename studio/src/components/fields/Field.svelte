@@ -7,6 +7,13 @@
   import Relations from './Relations.svelte';
   import Catalog from './Catalog.svelte';
   import Meter from './Meter.svelte';
+  import Kind from './Kind.svelte';
+  import Gauges from './Gauges.svelte';
+  import Arc from './Arc.svelte';
+  import Rulelist from './Rulelist.svelte';
+  import Dyad from './Dyad.svelte';
+  import Suspects from './Suspects.svelte';
+  import Clues from './Clues.svelte';
   import Ledger from './Ledger.svelte';
   import References from './References.svelte';
   import SourceNotes from './SourceNotes.svelte';
@@ -17,8 +24,12 @@
   import Excerpts from './Excerpts.svelte';
   import Outline from './Outline.svelte';
   import Lineage from './Lineage.svelte';
+  import FamilyTree from './FamilyTree.svelte';
+  import History from './History.svelte';
+  import Ties from './Ties.svelte';
   import AllegianceWeb from './AllegianceWeb.svelte';
   import EventTimeline from './EventTimeline.svelte';
+  import Timeline from './Timeline.svelte';
   import Spotify from './Spotify.svelte';
 
   let { entry, sec, others } = $props();
@@ -39,6 +50,20 @@
   <Catalog {entry} {sec} {others} />
 {:else if sec.type === 'meter'}
   <Meter {entry} {sec} />
+{:else if sec.type === 'kind'}
+  <Kind {entry} {sec} />
+{:else if sec.type === 'gauges'}
+  <Gauges {entry} {sec} />
+{:else if sec.type === 'arc'}
+  <Arc {entry} {sec} />
+{:else if sec.type === 'rulelist'}
+  <Rulelist {entry} {sec} />
+{:else if sec.type === 'dyad'}
+  <Dyad {entry} {sec} {others} />
+{:else if sec.type === 'suspects'}
+  <Suspects {entry} {sec} {others} />
+{:else if sec.type === 'clues'}
+  <Clues {entry} {sec} {others} />
 {:else if sec.type === 'ledger'}
   <Ledger {entry} {sec} />
 {:else if sec.type === 'references'}
@@ -59,10 +84,18 @@
   <Outline {entry} {sec} {others} />
 {:else if sec.type === 'lineage'}
   <Lineage {entry} {sec} {others} />
+{:else if sec.type === 'familytree'}
+  <FamilyTree {entry} {sec} {others} />
+{:else if sec.type === 'history'}
+  <History {entry} {sec} />
+{:else if sec.type === 'ties'}
+  <Ties {entry} {sec} {others} />
 {:else if sec.type === 'allegianceweb'}
   <AllegianceWeb {entry} {sec} {others} />
 {:else if sec.type === 'eventtimeline'}
   <EventTimeline {entry} {sec} />
+{:else if sec.type === 'timeline'}
+  <Timeline {entry} {sec} {others} />
 {:else if sec.type === 'spotify'}
   <Spotify items={entry.data[sec.key]} />
 {/if}

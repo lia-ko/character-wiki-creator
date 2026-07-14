@@ -75,11 +75,11 @@
       </div>
     {/if}
     <div class="caredit">
-      <button onclick={add}>＋ Add</button>
+      <button class="ce" onclick={add}>＋ Add</button>
       {#if imgs.length}
-        {#if cur === 0}<span class="isheader">★ header image</span>{:else}<button onclick={makeCover} title="use this as the header / cover image">★ Set as header</button>{/if}
-        <button onclick={recenter} disabled={!repositioned} title="re-center the image">⌖ Recenter</button>
-        <button onclick={() => del(cur)}>✕ Remove shown</button>
+        <button class="ce" class:on={cur === 0} disabled={cur === 0} onclick={makeCover} title={cur === 0 ? 'this is the header image' : 'use this image as the header'}>★ Header</button>
+        {#if repositioned}<button class="ce" onclick={recenter} title="re-center the image">⌖ Recenter</button>{/if}
+        <button class="ce danger" onclick={() => del(cur)} title="remove the shown image">✕ Remove</button>
       {/if}
     </div>
   </div>
@@ -133,9 +133,10 @@
   .cbtn{background:none;border:1px solid var(--rule);border-radius:6px;color:var(--muted);width:34px;height:26px;cursor:pointer;font-size:1rem;line-height:1}
   .cbtn:hover:not(:disabled){color:var(--ink);border-color:var(--accent)}.cbtn:disabled{opacity:.4;cursor:default}
   .ccount{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;color:var(--faint)}
-  .caredit{display:flex;gap:8px;justify-content:center}
-  .caredit button{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule);background:none;color:var(--muted);border-radius:6px;padding:6px 12px;cursor:pointer}
-  .caredit button:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
-  .caredit button:disabled{opacity:.4;cursor:default}
-  .isheader{display:flex;align-items:center;font-family:var(--mono);font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);padding:6px 4px}
+  .caredit{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .ce{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:var(--mono);font-size:.55rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);background:var(--panel-2);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer;line-height:1}
+  .ce:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
+  .ce:disabled{cursor:default}
+  .ce.on{color:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 35%,var(--rule));background:color-mix(in srgb,var(--accent) 10%,var(--panel-2))}
+  .ce.danger:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#fff}
 </style>
