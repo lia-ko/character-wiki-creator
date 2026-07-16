@@ -471,6 +471,17 @@ export const READER_CSS = [
 ".roster .nrow{display:flex;gap:8px;font-size:calc(.92rem*var(--bs,1))}",
 ".roster .nk{font-family:var(--mono);font-size:.48rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);width:48px;flex:0 0 48px;text-align:right;padding-top:3px}",
 ".roster .nv{color:var(--ink)}",
+/* plot twists */
+".twists{display:flex;flex-direction:column;gap:10px;margin:2px 0 8px}",
+".twist{border:1px solid var(--rule);border-left:3px solid var(--st,var(--rule));border-radius:11px;background:var(--panel);padding:11px 14px;display:flex;flex-direction:column;gap:7px}",
+".twist.cut{opacity:.6}",
+".twist .twtop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}",
+".twist .twnum{font-family:var(--mono);font-size:.6rem;color:var(--st,var(--faint));border:1px solid var(--st,var(--rule));border-radius:5px;padding:2px 6px;line-height:1;align-self:center}",
+".twist .twhook{font-family:var(--head);font-size:calc(1.2rem*var(--hs,1));color:var(--ink);flex:1;min-width:0}",
+".twist .twbadge{font-family:var(--mono);font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;border:1px solid var(--rule);border-radius:20px;padding:2px 9px;align-self:center}",
+".twist .twface{display:flex;gap:9px;font-size:calc(.95rem*var(--bs,1))}",
+".twist .twl{font-family:var(--mono);font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);width:52px;flex:0 0 52px;text-align:right;padding-top:4px}",
+".twist .twhinge{font-family:var(--mono);font-size:.58rem;letter-spacing:.04em;color:var(--muted);margin-top:1px}",
 /* avoid / anachronism variant */
 ".deflist.avoidlist{gap:7px}",
 ".deflist.avoidlist .drow{grid-template-columns:auto minmax(0,0.9fr) minmax(0,2fr);border:1px solid var(--rule);border-left:3px solid #c05348;border-radius:8px;background:var(--panel);padding:8px 13px}",

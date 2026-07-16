@@ -281,6 +281,7 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Key art', type: 'gallery', slot: 'aside' },
       { key: 'logline', label: 'Logline', type: 'richline', slot: 'main', lead: true },
       { key: 'structure', label: 'Structure', type: 'outline', slot: 'main' },
+      { key: 'twists', label: 'Twist ideas', type: 'twists', slot: 'main' },
     ],
   },
 
@@ -823,6 +824,7 @@ export function emptyValue(section){
     case 'checklist': return [];
     case 'clocks': return [];
     case 'npcroster': return [];
+    case 'twists': return [];
     case 'abilityscores': {
       const mode = section.mod || 'value';
       const labels = (section.abils && section.abils.length) ? section.abils : ['Stat 1', 'Stat 2', 'Stat 3'];

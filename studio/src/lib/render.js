@@ -705,8 +705,24 @@ function fieldHTML(entry, sec, ctx){
     case 'checklist': return checklistHTML(v);
     case 'clocks': return clocksHTML(v);
     case 'npcroster': return npcRosterHTML(v, ctx);
+    case 'twists': return twistsHTML(v, ctx);
     default: return '';
   }
+}
+
+// Plot twists — idea cards with a tracked status, setup → payoff, and an optional "hinges on" link.
+function twistsHTML(list, ctx){
+  if (!Array.isArray(list)) return '';
+  const STATUS = { idea: ['Idea', '#9aa1a8'], maybe: ['Maybe', '#c9a24a'], planted: ['Planted', '#5f8fb0'], used: ['Used', '#5aa06f'], cut: ['Cut', '#b0596a'] };
+  const cards = list.filter(r => (r.hook || r.setup || r.payoff || '').trim()).map((r, i) => {
+    const st = STATUS[r.status] || STATUS.idea;
+    const face = (label, val) => val && val.trim() ? `<div class="twface"><span class="twl">${label}</span><span>${esc(val)}</span></div>` : '';
+    const hinge = r.targetId && ctx.title && ctx.title(r.targetId);
+    const href = r.targetId && ctx.href && ctx.href(r.targetId);
+    const hingeHTML = hinge ? `<div class="twhinge">Hinges on ${href ? `<a href="${esc(href)}">${esc(hinge)}</a>` : esc(hinge)}</div>` : '';
+    return `<div class="twist${r.status === 'cut' ? ' cut' : ''}" style="--st:${st[1]}"><div class="twtop"><span class="twnum">${i + 1}</span><span class="twhook">${esc(r.hook || 'Untitled twist')}</span><span class="twbadge" style="color:${st[1]};border-color:${st[1]}">${esc(st[0])}</span></div>${face('Setup', r.setup)}${face('Payoff', r.payoff)}${hingeHTML}</div>`;
+  }).join('');
+  return cards ? `<div class="twists">${cards}</div>` : '';
 }
 
 // NPC roster — quick minor-NPC cards. The `secret` field is GM-only and is NOT exported.

@@ -1,13 +1,27 @@
 <script>
-  import { markDirty, openEntry, confirmDelete } from '../../lib/store.svelte.js';
+  import { markDirty, openEntry, confirmDelete, createLinkedEntry } from '../../lib/store.svelte.js';
+  import { templateFor } from '../../lib/templates.js';
   import { pickImages } from '../../lib/images.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
+  import NewEntryMenu from '../NewEntryMenu.svelte';
   let { entry, sec, others } = $props();
   const list = $derived(entry.data[sec.key]);
 
   // when a section declares linkTypes (e.g. Sources → 'source'), surface those entries first
   const linkTypes = sec.linkTypes || null;
+  // a single declared linkType → create-and-link is one click; otherwise offer a type picker
+  const createType = $derived(linkTypes && linkTypes.length === 1 ? linkTypes[0] : null);
+  // create a new entry (titled from the row's name) and link this relation to it, without navigating away
+  function createAndLink(i, type){
+    const r = list[i];
+    const title = (r.name && r.name !== 'New relation') ? r.name.trim() : '';
+    const e = createLinkedEntry(type, title);
+    if (!e) return;
+    r.targetId = e.id;
+    if (!title) r.name = e.title;   // reflect the generated name back into the row
+    markDirty();
+  }
   const primary = $derived(linkTypes ? others.filter(o => linkTypes.includes(o.type)) : others);
   const secondary = $derived(linkTypes ? others.filter(o => !linkTypes.includes(o.type)) : []);
 
@@ -43,21 +57,30 @@
           </button>
           <div class="rmain">
             <RichEditor value={r.body} multiline placeholder="Write-up…" oninput={(v) => setBody(i, v)} />
-            <select class="rlink" bind:value={r.targetId} onchange={markDirty}>
-              <option value="">— link to another entry —</option>
-              {#if linkTypes}
-                <optgroup label={sec.label}>
-                  {#each primary as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
-                </optgroup>
-                {#if secondary.length}
-                  <optgroup label="Other entries">
-                    {#each secondary as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+            <div class="rlinkrow">
+              <select class="rlink" bind:value={r.targetId} onchange={markDirty}>
+                <option value="">— link to another entry —</option>
+                {#if linkTypes}
+                  <optgroup label={sec.label}>
+                    {#each primary as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
                   </optgroup>
+                  {#if secondary.length}
+                    <optgroup label="Other entries">
+                      {#each secondary as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+                    </optgroup>
+                  {/if}
+                {:else}
+                  {#each others as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
                 {/if}
-              {:else}
-                {#each others as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
+              </select>
+              {#if !r.targetId}
+                {#if createType}
+                  <button class="rcreate" onclick={() => createAndLink(i, createType)} title="create a new entry and link it here">＋ Create &amp; link {templateFor(createType).label.toLowerCase()}</button>
+                {:else}
+                  <NewEntryMenu oncreate={(type) => createAndLink(i, type)} align="left" label="Create &amp; link" subtle />
+                {/if}
               {/if}
-            </select>
+            </div>
           </div>
         </div>
       {/if}
@@ -88,7 +111,10 @@
   .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-align:center;padding:8px}
   .rthumb .ph{position:static;padding:0}
   .rmain{display:flex;flex-direction:column;gap:10px;min-width:0}
-  .rlink{align-self:flex-start;font-family:var(--sans);font-size:.72rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:6px 9px}
+  .rlinkrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .rlink{font-family:var(--sans);font-size:.72rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:6px 9px}
+  .rcreate{font:inherit;font-size:.72rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:6px 11px;cursor:pointer}
+  .rcreate:hover{border-color:var(--accent);color:var(--ink)}
   .addbtn{width:100%;margin-top:4px;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px;cursor:pointer;font-family:var(--sans);font-size:.8rem}
   .addbtn:hover{border-color:var(--accent);color:var(--ink)}
   @media(max-width:640px){.rbody{grid-template-columns:1fr}}

@@ -47,6 +47,7 @@
   import Checklist from './Checklist.svelte';
   import Clocks from './Clocks.svelte';
   import NpcRoster from './NpcRoster.svelte';
+  import Twists from './Twists.svelte';
 
   // Edit-widget registry: field type → its editor component. Every widget here takes the
   // uniform ({entry, sec, others}) prop shape (components ignore props they don't declare),
@@ -63,7 +64,7 @@
     lineage: Lineage, familytree: FamilyTree, history: History, ties: Ties,
     allegianceweb: AllegianceWeb, eventtimeline: EventTimeline, timeline: Timeline,
     abilityscores: AbilityScores, rolltable: RollTable, checklist: Checklist,
-    clocks: Clocks, npcroster: NpcRoster,
+    clocks: Clocks, npcroster: NpcRoster, twists: Twists,
   };
 
   const SPECIAL = ['richline', 'gallery', 'spotify'];   // handled explicitly below, not via the map

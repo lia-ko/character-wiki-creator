@@ -4,7 +4,8 @@
   import { dismissable } from '../lib/dismissable.js';
   // align: which edge the dropdown anchors to ('right' in a top bar, 'left' in a sidebar).
   // block: full-width trigger button (for a sidebar) vs the inline pill (top bar).
-  let { oncreate, align = 'right', block = false } = $props();
+  // label: trigger text. subtle: muted styling instead of the primary pill (for inline use).
+  let { oncreate, align = 'right', block = false, label = 'New entry', subtle = false } = $props();
   let open = $state(false);
   let q = $state('');
   let fileEl;
@@ -31,7 +32,7 @@
 </script>
 
 <div class="newwrap" class:block use:dismissable={() => open = false}>
-  <button class="newbtn btn-primary" class:block onclick={toggle} aria-expanded={open}>＋ New entry <span class="caret">▾</span></button>
+  <button class="newbtn" class:btn-primary={!subtle} class:subtle class:block onclick={toggle} aria-expanded={open}>＋ {label} <span class="caret">▾</span></button>
   {#if open}
     <div class="menu" class:left={align === 'left'}>
       <input class="nsearch" use:focusOnMount bind:value={q} placeholder="Filter types — character, faction…" spellcheck="false" />
@@ -74,6 +75,8 @@
   .newwrap{position:relative;flex:none}
   .newwrap.block{display:block;width:100%}
   .newbtn{font:inherit;font-size:.8rem;border-radius:8px;padding:8px 15px;display:flex;align-items:center;gap:8px}
+  .newbtn.subtle{font-size:.72rem;padding:6px 11px;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);cursor:pointer}
+  .newbtn.subtle:hover{border-color:var(--accent);color:var(--ink)}
   .newbtn.block{width:100%;justify-content:center}
   .caret{font-size:.62rem;opacity:.85}
   .menu{position:absolute;top:calc(100% + 6px);right:0;z-index:var(--z-dropdown);width:270px;max-width:92vw;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-height:min(72vh,480px);display:flex;flex-direction:column;overflow:hidden}

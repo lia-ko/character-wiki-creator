@@ -1,11 +1,21 @@
 <script>
   import { sanitizeRich, richToEditor } from '../../lib/richtext.js';
-  import { curProject, curEntry } from '../../lib/store.svelte.js';
-  import { templateFor } from '../../lib/templates.js';
+  import { app, curProject, curEntry, createLinkedEntry } from '../../lib/store.svelte.js';
+  import { templateFor, FAMILIES } from '../../lib/templates.js';
   let { value = '', placeholder = '', multiline = false, oninput } = $props();
   let el;
-  let menu = $state(null);   // { items, index, x, y } while the [[ autocomplete is open
+  // { mode:'link'|'create', q, items, index, x, y } while the [[ autocomplete is open.
+  // link mode: entry matches + a "create" action; create mode: a type picker for the new entry.
+  let menu = $state(null);
+  let menuEl = $state(null);
   let focused = $state(false);
+
+  // every sheet type the new entry could be (built-ins + the user's own), for the create picker
+  const typeOptions = $derived.by(() => {
+    const built = FAMILIES.flatMap(f => f.types.map(t => { const tpl = templateFor(t); return { type: t, icon: tpl.icon, label: tpl.label }; }));
+    const custom = (app.ws.typeLibrary || []).map(t => ({ type: t.type, icon: t.icon, label: t.label }));
+    return [...built, ...custom];
+  });
 
   function exec(cmd){ el.focus(); try { document.execCommand('styleWithCSS', false, false); } catch (_) {} document.execCommand(cmd, false, null); handleInput(); }
 
@@ -33,12 +43,29 @@
     const before = range.startContainer.nodeValue.slice(0, range.startOffset);
     const m = before.match(/\[\[([^\[\]\n]*)$/);
     if (!m){ menu = null; return; }
-    const q = m[1].toLowerCase();
-    const items = candidates.filter(e => e.title.toLowerCase().includes(q)).sort((a, b) => score(b, q) - score(a, q)).slice(0, 8);
+    const rawQ = m[1].trim();
+    const q = rawQ.toLowerCase();
+    const matches = candidates.filter(e => e.title.toLowerCase().includes(q)).sort((a, b) => score(b, q) - score(a, q)).slice(0, 8)
+      .map(e => ({ kind: 'link', ...e }));
+    // with a typed name, offer to create-and-link a brand-new entry for it
+    const items = rawQ ? [...matches, { kind: 'create' }] : matches;
     let rect = range.getBoundingClientRect();
     if (!rect.width && !rect.height) rect = el.getBoundingClientRect();
-    menu = { items, index: 0, x: rect.left, y: rect.bottom };
+    menu = { mode: 'link', q: rawQ, items, index: 0, x: rect.left, y: rect.bottom };
   }
+
+  // second phase: choosing the type for the new entry (its type can't be changed later)
+  function enterCreateMode(){ if (menu) menu = { ...menu, mode: 'create', items: typeOptions.map(t => ({ kind: 'type', ...t })), index: 0 }; }
+  function doCreate(type){ const e = createLinkedEntry(type, menu?.q); if (e) insertLink(e); else menu = null; }
+  function chooseItem(it){
+    if (!it) return;
+    if (it.kind === 'link') insertLink(it);
+    else if (it.kind === 'create') enterCreateMode();
+    else if (it.kind === 'type') doCreate(it.type);
+  }
+
+  // keep the highlighted row in view (the create-mode type list can scroll)
+  $effect(() => { if (menu && menuEl){ menuEl.querySelector('.xitem.on')?.scrollIntoView({ block: 'nearest' }); } });
 
   function insertLink(entry){
     const sel = window.getSelection();
@@ -63,10 +90,10 @@
 
   function keydown(e){
     if (menu){
-      if (e.key === 'ArrowDown'){ e.preventDefault(); menu.index = (menu.index + 1) % menu.items.length; return; }
-      if (e.key === 'ArrowUp'){ e.preventDefault(); menu.index = (menu.index - 1 + menu.items.length) % menu.items.length; return; }
-      if ((e.key === 'Enter' || e.key === 'Tab') && menu.items.length){ e.preventDefault(); insertLink(menu.items[menu.index]); return; }
-      if (e.key === 'Escape'){ e.preventDefault(); menu = null; return; }
+      if (menu.items.length && (e.key === 'ArrowDown')){ e.preventDefault(); menu.index = (menu.index + 1) % menu.items.length; return; }
+      if (menu.items.length && (e.key === 'ArrowUp')){ e.preventDefault(); menu.index = (menu.index - 1 + menu.items.length) % menu.items.length; return; }
+      if ((e.key === 'Enter' || e.key === 'Tab') && menu.items.length){ e.preventDefault(); chooseItem(menu.items[menu.index]); return; }
+      if (e.key === 'Escape'){ e.preventDefault(); if (menu.mode === 'create') checkTrigger(); else menu = null; return; }
     }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey){
       if (e.code === 'Digit8'){ e.preventDefault(); exec('insertUnorderedList'); return; }
@@ -99,18 +126,34 @@
        onfocus={() => focused = true}
        onblur={() => { setTimeout(() => menu = null, 120); setTimeout(() => focused = false, 150); }}></div>
   {#if menu}
-    <div class="xmenu" style="left:{menu.x}px;top:calc({menu.y}px + 4px)">
-      {#if menu.items.length}
-        {#each menu.items as it, i (it.id)}
+    <div class="xmenu" bind:this={menuEl} style="left:{menu.x}px;top:calc({menu.y}px + 4px)">
+      {#if menu.mode === 'create'}
+        <div class="xhdr">Create “{menu.q}” as…</div>
+        {#each menu.items as it, i (i)}
           <button type="button" class="xitem" class:on={i === menu.index}
-                  onmousedown={(e) => { e.preventDefault(); insertLink(it); }}
+                  onmousedown={(e) => { e.preventDefault(); doCreate(it.type); }}
                   onmousemove={() => menu.index = i}>
-            <span class="xic">{templateFor(it.type).icon}</span>
-            <span class="xtt">{it.title}</span>
+            <span class="xic">{it.icon}</span><span class="xtt">{it.label}</span>
           </button>
         {/each}
+      {:else if menu.items.length}
+        {#each menu.items as it, i (i)}
+          {#if it.kind === 'create'}
+            <button type="button" class="xitem xcreate" class:on={i === menu.index}
+                    onmousedown={(e) => { e.preventDefault(); enterCreateMode(); }}
+                    onmousemove={() => menu.index = i}>
+              <span class="xic">＋</span><span class="xtt">Create “{menu.q}”…</span><span class="xhint">new entry</span>
+            </button>
+          {:else}
+            <button type="button" class="xitem" class:on={i === menu.index}
+                    onmousedown={(e) => { e.preventDefault(); insertLink(it); }}
+                    onmousemove={() => menu.index = i}>
+              <span class="xic">{templateFor(it.type).icon}</span><span class="xtt">{it.title}</span>
+            </button>
+          {/if}
+        {/each}
       {:else}
-        <div class="xnone">No entry matches — keep typing</div>
+        <div class="xnone">Type a name to link or create an entry</div>
       {/if}
     </div>
   {/if}
@@ -137,6 +180,10 @@
   .xitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font:inherit;font-size:.9rem;background:none;border:none;border-radius:7px;padding:7px 9px;cursor:pointer;color:var(--ink)}
   .xitem.on{background:var(--panel-2)}
   .xic{color:var(--accent-soft);width:1.1em;text-align:center;flex:none}
-  .xtt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .xtt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
   .xnone{padding:9px 10px;font-size:.8rem;color:var(--faint);font-style:italic}
+  .xhdr{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:6px 9px 4px}
+  .xcreate{border-top:1px solid var(--rule);margin-top:3px;padding-top:9px;color:var(--accent-soft)}
+  .xcreate .xic{color:var(--accent)}
+  .xhint{font-family:var(--mono);font-size:.52rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);flex:none}
 </style>

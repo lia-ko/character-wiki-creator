@@ -283,6 +283,18 @@ export function addEntry(type){
   markDirty();
   openEntry(e.id);
 }
+// create an entry in the current project and RETURN it, WITHOUT navigating away — powers
+// create-and-link from prose [[mentions]] and relation pickers (the author stays where they are)
+export function createLinkedEntry(type, title){
+  const p = curProject(); if (!p) return null;
+  if (isCustomType(type) && !(p.types || []).some(t => t.type === type)){
+    importTypeToProject(p, customTypeById(type)); rebuildCustomTypes(app.ws);
+  }
+  const e = createEntry(type, (title || '').trim());
+  p.entries.push(e);
+  markDirty();
+  return e;
+}
 
 /* ---- custom sheet types (the workspace type library) ---- */
 function templateLabel(type){ const t = customTypeById(type); return t ? t.label.toLowerCase() : type; }

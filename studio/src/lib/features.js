@@ -41,6 +41,7 @@ export const FEATURE_GROUPS = [
     { type: 'timeline', name: 'Timeline', desc: 'A chronicle of dated beats (3 views).', icon: '◷', sec: { label: 'Timeline', slot: 'main' } },
     { type: 'history', name: 'Simple timeline', desc: 'Dated beats, top-to-bottom.', icon: '⋮', sec: { label: 'History', slot: 'main' } },
     { type: 'arc', name: 'Arc curve', desc: 'A change-over-time curve you can drag.', icon: '◠', sec: { label: 'Arc', slot: 'main' } },
+    { type: 'twists', name: 'Plot twists', desc: 'Twist ideas — setup → payoff, with a status you track.', icon: '↯', sec: { label: 'Twist ideas', slot: 'main' } },
     { type: 'chronology', name: 'Date list', desc: 'A light dated list (date · event · link).', icon: '⋯', sec: { label: 'Dates', slot: 'main' } },
   ] },
   { group: 'Game / RPG', icon: '⚄', color: '#b8863f', features: [
