@@ -248,8 +248,11 @@ export function stepEntry(dir){
 }
 export function openProjects(){ app.view = 'projects'; }
 export function openProject(id){ app.projectId = id; app.view = 'project'; }
-export function openEntry(id){ app.entryId = id; app.view = 'entry'; app.mode = 'edit'; }
-export function openAnyEntry(id){ for (const p of app.ws.projects){ if (p.entries.some(e => e.id === id)){ app.projectId = p.id; app.entryId = id; app.view = 'entry'; app.mode = 'edit'; return; } } }
+// on a phone the entry nav overlays the sheet (it can't shift the content) — close it when a
+// selection is made so the opened sheet is actually visible; on wider screens it stays put beside the sheet
+const navIsOverlay = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width:900px)').matches;
+export function openEntry(id){ app.entryId = id; app.view = 'entry'; app.mode = 'edit'; if (navIsOverlay()) app.navOpen = false; }
+export function openAnyEntry(id){ for (const p of app.ws.projects){ if (p.entries.some(e => e.id === id)){ app.projectId = p.id; app.entryId = id; app.view = 'entry'; app.mode = 'edit'; if (navIsOverlay()) app.navOpen = false; return; } } }
 export function toggleMode(){ app.mode = app.mode === 'edit' ? 'preview' : 'edit'; }
 
 /* ---- mutations ---- */

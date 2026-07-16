@@ -2,7 +2,9 @@
   import { FAMILIES, templateFor } from '../lib/templates.js';
   import { app, newTypeAndEdit, openBuilder, importTypeFromJSON, exportAllTypes } from '../lib/store.svelte.js';
   import { dismissable } from '../lib/dismissable.js';
-  let { oncreate } = $props();
+  // align: which edge the dropdown anchors to ('right' in a top bar, 'left' in a sidebar).
+  // block: full-width trigger button (for a sidebar) vs the inline pill (top bar).
+  let { oncreate, align = 'right', block = false } = $props();
   let open = $state(false);
   let q = $state('');
   let fileEl;
@@ -28,10 +30,10 @@
   function focusOnMount(node){ node.focus(); }
 </script>
 
-<div class="newwrap" use:dismissable={() => open = false}>
-  <button class="newbtn btn-primary" onclick={toggle} aria-expanded={open}>＋ New entry <span class="caret">▾</span></button>
+<div class="newwrap" class:block use:dismissable={() => open = false}>
+  <button class="newbtn btn-primary" class:block onclick={toggle} aria-expanded={open}>＋ New entry <span class="caret">▾</span></button>
   {#if open}
-    <div class="menu">
+    <div class="menu" class:left={align === 'left'}>
       <input class="nsearch" use:focusOnMount bind:value={q} placeholder="Filter types — character, faction…" spellcheck="false" />
       <div class="nlist">
         {#if ql}
@@ -70,9 +72,12 @@
 
 <style>
   .newwrap{position:relative;flex:none}
+  .newwrap.block{display:block;width:100%}
   .newbtn{font:inherit;font-size:.8rem;border-radius:8px;padding:8px 15px;display:flex;align-items:center;gap:8px}
+  .newbtn.block{width:100%;justify-content:center}
   .caret{font-size:.62rem;opacity:.85}
   .menu{position:absolute;top:calc(100% + 6px);right:0;z-index:var(--z-dropdown);width:270px;max-width:92vw;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-height:min(72vh,480px);display:flex;flex-direction:column;overflow:hidden}
+  .menu.left{right:auto;left:0}
   .nsearch{flex:none;margin:0;padding:10px 12px;background:var(--panel);border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;font-size:.82rem;outline:none}
   .nsearch::placeholder{color:var(--faint)}
   .nlist{flex:1;min-height:0;overflow:auto;padding:6px}

@@ -1,6 +1,7 @@
 <script>
-  import { app, curProject, openEntry, toggleNav, renameGroup } from '../lib/store.svelte.js';
+  import { app, curProject, openEntry, addEntry, toggleNav, renameGroup } from '../lib/store.svelte.js';
   import { ENTRY_TYPES, templateFor } from '../lib/templates.js';
+  import NewEntryMenu from './NewEntryMenu.svelte';
   const p = $derived(curProject());
   let q = $state('');
   let collapsed = $state(new Set());
@@ -44,11 +45,15 @@
   });
 </script>
 
+<!-- tap-away backdrop — only rendered as a visible layer where the nav overlays the sheet (mobile) -->
+<button class="enav-scrim" onclick={toggleNav} aria-label="close entries panel" tabindex="-1"></button>
 <aside class="enav">
   <div class="ehd">
     <input class="efilter" bind:value={q} placeholder="Filter entries…" spellcheck="false" />
     <button class="ecollapse" onclick={toggleNav} title="hide panel" aria-label="hide entries panel">«</button>
   </div>
+  <!-- create a new entry (any type) without leaving the editor — it opens in place -->
+  <div class="enav-new"><NewEntryMenu oncreate={addEntry} align="left" block /></div>
   <div class="elist">
     {#each groups as g (g.type)}
       <div class="etype"><span class="eic">{g.tpl.icon}</span><span class="etl">{g.tpl.plural}</span><span class="ect">{g.count}</span></div>
@@ -85,6 +90,7 @@
 <style>
   .enav{position:fixed;left:0;top:var(--appbar-h);bottom:0;width:250px;z-index:calc(var(--z-appbar) - 1);background:var(--panel);border-right:1px solid var(--rule);display:flex;flex-direction:column}
   .ehd{display:flex;align-items:center;gap:6px;padding:10px;border-bottom:1px solid var(--rule)}
+  .enav-new{padding:10px 10px 0}
   .efilter{flex:1;min-width:0;background:var(--panel-2);border:1px solid var(--rule);border-radius:7px;color:var(--ink);font:inherit;font-size:.82rem;padding:6px 9px;outline:none}
   .efilter:focus{border-color:var(--accent)}
   .efilter::placeholder{color:var(--faint)}
@@ -114,5 +120,10 @@
   .eitem:hover{background:var(--panel-2);color:var(--ink)}
   .eitem.cur{background:color-mix(in srgb,var(--accent) 16%,var(--panel-2));color:var(--ink);box-shadow:inset 2px 0 var(--accent)}
   .enone{color:var(--faint);font-size:.82rem;padding:12px 8px}
-  @media(max-width:900px){ .enav{box-shadow:0 0 40px rgba(0,0,0,.5)} }
+  /* scrim sits behind the panel; hidden on wide screens where the nav shifts the content instead of overlaying it */
+  .enav-scrim{display:none}
+  @media(max-width:900px){
+    .enav{box-shadow:0 0 40px rgba(0,0,0,.5)}
+    .enav-scrim{display:block;position:fixed;inset:var(--appbar-h) 0 0 0;z-index:calc(var(--z-appbar) - 2);border:none;padding:0;cursor:pointer;background:rgba(0,0,0,.5)}
+  }
 </style>

@@ -897,7 +897,11 @@ export function renderEntry(entry, ctx){
       main = `<div class="wrap-narrow">${gal}${title}${body}</div>`;
     }
   } else if (layout === 'split'){
-    main = `<div class="wsplit"><div class="media">${gal}</div><div class="col">${title}${stats}${body}</div></div>`;
+    // with no image the portrait column would just be empty space stranding the content to one
+    // side — collapse to a centered single column (the hero format) instead
+    main = gal
+      ? `<div class="wsplit"><div class="media">${gal}</div><div class="col">${title}${stats}${body}</div></div>`
+      : `<div class="whero">${title}${stats}${body}</div>`;
   } else if (layout === 'hero'){
     // a sheet shown as a top banner uses a feature image; sigil sheets keep emblem-beside-title
     const head = tpl.media === 'sigil'
