@@ -14,9 +14,12 @@ export const FEATURE_GROUPS = [
     { type: 'deflist', name: 'Definitions', desc: 'Term → meaning, with an optional note.', icon: '⇄', sec: { label: 'Definitions', slot: 'main', termPh: 'term', defPh: 'meaning', notePh: 'note' } },
     { type: 'gauges', name: 'At-a-glance gauges', desc: 'Little pip-meters & values, side by side.', icon: '◔', sec: { label: 'At a glance', slot: 'aside' } },
     { type: 'meter', name: 'Scale / meter', desc: 'One labelled level-scale (threat, rarity…).', icon: '▮', sec: { label: 'Scale', slot: 'main', levels: ['Low', 'Mid', 'High'] } },
+    { type: 'table', name: 'Table', desc: 'A multi-column grid — columns & rows you define.', icon: '⊞', sec: { label: 'Table', slot: 'main' } },
+    { type: 'statchart', name: 'Stat chart / radar', desc: 'A radar or bar chart of numeric attributes.', icon: '⬡', sec: { label: 'Stats', slot: 'main' } },
   ] },
   { group: 'Media', color: '#8a86c9', features: [
     { type: 'gallery', name: 'Image gallery', desc: 'A carousel of images or a plate.', icon: '▦', sec: { label: 'Imagery', slot: 'aside' } },
+    { type: 'embed', name: 'Embed / Video', desc: 'YouTube, Vimeo, Spotify, a map or 3D embed.', icon: '▷', sec: { label: 'Media', slot: 'main' } },
   ] },
   { group: 'Connect', color: '#5aa06f', features: [
     { type: 'relations', name: 'Linked entries', desc: 'Relations to other sheets, with roles.', icon: '☍', sec: { label: 'Connections', slot: 'main', display: 'expand' } },
@@ -24,6 +27,8 @@ export const FEATURE_GROUPS = [
     { type: 'familytree', name: 'Family tree', desc: 'An auto-laid-out lineage graph.', icon: '⑂', sec: { label: 'Lineage', slot: 'main' } },
     { type: 'crew', name: 'Roster (with portraits)', desc: 'Cards of linked people — portrait, role, notes.', icon: '◫', sec: { label: 'Roster', slot: 'main' } },
     { type: 'dyad', name: 'Pairing (two-sided)', desc: 'Two linked people + the tension between them.', icon: '⇔', sec: { label: 'Pairing', slot: 'main' } },
+    { type: 'matrix', name: 'Relationship matrix', desc: 'An N×N grid of how a cast relates — at a glance.', icon: '⊠', sec: { label: 'Relationships', slot: 'main' } },
+    { type: 'orgchart', name: 'Org / hierarchy chart', desc: 'A command tree — leader → lieutenants → members.', icon: '⋔', sec: { label: 'Hierarchy', slot: 'main' } },
   ] },
   { group: 'Collect', color: '#c98a6a', features: [
     { type: 'catalog', name: 'Field-guide catalog', desc: 'Grouped cards with a scale badge + link-out.', icon: '▤', sec: { label: 'Catalog', slot: 'main', scale: 'Rarity' } },

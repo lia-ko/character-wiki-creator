@@ -10,6 +10,10 @@ import { coverOf, imgSrc, imgPos, bodySectionsOf } from './model.js';
 import { paletteVars, palById, fontVars, fontFaceCSS } from './theme.js';
 import { embedUrl, embedHeight } from './spotify.js';
 import { ARC_C, arcMode, effectiveGeom, arcLine, arcArea } from './arc.js';
+import { embedInfo, EMBED_SANDBOX, EMBED_ALLOW } from './embed.js';
+import { MATRIX_KINDS, MATRIX_COLOR, pairKey } from './matrix.js';
+import { radarGeom, ptsAttr, labelAnchor } from './statchart.js';
+import { layoutOrg, orgConnector, ORG } from './orgchart.js';
 import { READER_CSS } from './exportcss.js';
 
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'sec';
@@ -337,6 +341,87 @@ function rulelistHTML(list, sec){
   }
   return `<ol class="rlaws">${items.map(r => `<li>${esc(r.text)}</li>`).join('')}</ol>`;
 }
+// safe embeds — YouTube/Vimeo/Spotify/map/3D iframes (generic ones sandboxed)
+function embedHTML(list){
+  if (!Array.isArray(list) || !list.length) return '';
+  const items = list.map(e => {
+    const info = embedInfo(e && e.url);
+    const cap = e && e.caption && e.caption.trim() ? `<div class="emcap">${esc(e.caption)}</div>` : '';
+    if (!info.ok) return (e && e.url && e.url.trim()) ? `<div class="embed"><a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.url)}</a>${cap}</div>` : '';
+    const style = info.height ? `height:${info.height}px` : `aspect-ratio:${info.aspect || '16 / 9'}`;
+    const sandbox = info.generic ? ` sandbox="${EMBED_SANDBOX}"` : '';
+    return `<div class="embed"><div class="emframe" style="${style}"><iframe src="${esc(info.src)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="${EMBED_ALLOW}" allowfullscreen${sandbox}></iframe></div>${cap}</div>`;
+  }).join('');
+  return items.trim() ? `<div class="embeds">${items}</div>` : '';
+}
+// org / hierarchy chart — a top-down command tree
+function orgchartHTML(v, ctx){
+  const L = layoutOrg(v);
+  if (!L.nodes.length) return '';
+  const personName = (n) => n.name || (n.targetId && ctx.title && ctx.title(n.targetId)) || '';
+  const edges = L.edges.map(e => { const p = L.nodes.find(n => n.id === e.from), c = L.nodes.find(n => n.id === e.to); return p && c ? `<path d="${orgConnector(p, c)}" fill="none" stroke="#2b3239" stroke-width="1.5"/>` : ''; }).join('');
+  const nodes = L.nodes.map(n => {
+    const nm = personName(n), href = n.targetId && ctx.href && ctx.href(n.targetId);
+    const inner = nm
+      ? `<text x="12" y="20" style="font-family:var(--head);font-size:14px;fill:var(--ink)">${esc(nm)}</text>${n.title ? `<text x="12" y="36" style="font-family:var(--mono);font-size:9px;letter-spacing:.6px;text-transform:uppercase;fill:var(--faint)">${esc(n.title)}</text>` : ''}`
+      : `<text x="12" y="29" style="font-family:var(--head);font-size:14px;fill:var(--ink)">${esc(n.title || '—')}</text>`;
+    const box = `<rect width="${ORG.NW}" height="${ORG.NH}" rx="9" fill="var(--panel-2,#1c2228)" stroke="${n.targetId ? '#7f3a34' : '#2b3239'}"/>${inner}`;
+    const g = `<g transform="translate(${n.x},${n.y})">${box}</g>`;
+    return href ? `<a href="${esc(href)}">${g}</a>` : g;
+  }).join('');
+  return `<div class="orgchart"><svg viewBox="0 0 ${L.width} ${L.height}" width="${L.width}" style="max-width:100%;height:auto">${edges}${nodes}</svg></div>`;
+}
+// stat chart — a radar (spider) shape or horizontal bars of numeric attributes
+const SC_ACCENT = '#c2564a', SC_RULE = '#2b3239', SC_LABEL = '#9aa1a8';
+function statchartHTML(v){
+  if (!v || !Array.isArray(v.stats)) return '';
+  const stats = v.stats.filter(s => s && (s.label || s.value != null && s.value !== ''));
+  if (!stats.length) return '';
+  const max = Number(v.max) > 0 ? Number(v.max) : 10;
+  if (v.view === 'radar' && stats.length >= 3){
+    const size = 260;
+    const g = radarGeom(stats.map(s => Number(s.value) || 0), max, size);
+    const rings = g.rings.map(r => `<polygon points="${ptsAttr(r)}" fill="none" stroke="${SC_RULE}" stroke-width="1"/>`).join('');
+    const axes = g.axisEnds.map(a => `<line x1="${g.cx}" y1="${g.cy}" x2="${a.x.toFixed(1)}" y2="${a.y.toFixed(1)}" stroke="${SC_RULE}" stroke-width="1"/>`).join('');
+    const dots = g.data.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.6" fill="${SC_ACCENT}"/>`).join('');
+    const labels = stats.map((s, i) => `<text x="${g.labelPts[i].x.toFixed(1)}" y="${g.labelPts[i].y.toFixed(1)}" text-anchor="${labelAnchor(g.labelPts[i].x, g.cx)}" dominant-baseline="middle" style="fill:${SC_LABEL};font-family:var(--mono);font-size:10px;letter-spacing:.4px">${esc(s.label || '')}</text>`).join('');
+    const shape = `<polygon points="${ptsAttr(g.data)}" fill="${SC_ACCENT}" fill-opacity=".2" stroke="${SC_ACCENT}" stroke-width="2" stroke-linejoin="round"/>`;
+    return `<div class="statchart"><svg viewBox="0 0 ${size} ${size}" class="scradar">${rings}${axes}${shape}${dots}${labels}</svg></div>`;
+  }
+  const bars = stats.map(s => {
+    const w = Math.max(0, Math.min(100, (Number(s.value) || 0) / max * 100));
+    return `<div class="scbar"><span class="scl">${esc(s.label || '')}</span><span class="sct"><i style="width:${w.toFixed(1)}%"></i></span><span class="scv">${esc(String(s.value ?? ''))}</span></div>`;
+  }).join('');
+  return `<div class="statchart"><div class="scbars">${bars}</div></div>`;
+}
+// relationship matrix — symmetric N×N cast grid, colour-coded at a glance
+function matrixHTML(v, ctx){
+  if (!v || !Array.isArray(v.people) || v.people.length < 2) return '';
+  const people = v.people, pairs = v.pairs || {};
+  const nameOf = (p) => esc(p.name || (p.targetId && ctx.title && ctx.title(p.targetId)) || 'Unknown');
+  const head = '<tr><th class="mcorner"></th>' + people.map(p => `<th class="mcol"><span>${nameOf(p)}</span></th>`).join('') + '</tr>';
+  const rows = people.map(pi => {
+    const cells = people.map(pj => {
+      if (pi.id === pj.id) return '<td class="mself"></td>';
+      const kd = MATRIX_COLOR[pairs[pairKey(pi.id, pj.id)]];
+      return kd ? `<td class="mcell" style="background:${kd.c}" title="${nameOf(pi)} · ${esc(kd.l)} · ${nameOf(pj)}"></td>` : '<td class="mcell"></td>';
+    }).join('');
+    return `<tr><th class="mrow">${nameOf(pi)}</th>${cells}</tr>`;
+  }).join('');
+  const used = new Set(Object.values(pairs));
+  const legend = MATRIX_KINDS.filter(k => used.has(k.v)).map(k => `<span class="mlg"><i style="background:${k.c}"></i>${esc(k.l)}</span>`).join('');
+  return `<div class="matrix"><div class="mtxscroll"><table class="mtx"><thead>${head}</thead><tbody>${rows}</tbody></table></div>${legend ? `<div class="mlegend">${legend}</div>` : ''}</div>`;
+}
+// generic table — user-defined columns × rows
+function tableHTML(v){
+  if (!v || !Array.isArray(v.cols) || !v.cols.length) return '';
+  const cols = v.cols, rows = Array.isArray(v.rows) ? v.rows : [];
+  const anyContent = cols.some(c => (c || '').trim()) || rows.some(r => (r || []).some(c => (c || '').trim()));
+  if (!anyContent) return '';
+  const head = '<tr>' + cols.map(c => `<th>${esc(c || '')}</th>`).join('') + '</tr>';
+  const body = rows.map(r => '<tr>' + cols.map((_, i) => `<td>${esc((r && r[i]) || '')}</td>`).join('') + '</tr>').join('');
+  return `<div class="dtblwrap"><table class="dtbl"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
 function kindHTML(v){
   if (!v || !v.id) return '';
   const genre = v.genre ? `<span class="kgenre">${esc(v.genre.split(' · ')[0])}</span>` : '';
@@ -592,6 +677,11 @@ function fieldHTML(entry, sec, ctx){
     case 'dyad': return dyadHTML(v, ctx);
     case 'crew': return crewHTML(v, ctx);
     case 'dialectic': return dialecticHTML(v, sec);
+    case 'table': return tableHTML(v);
+    case 'embed': return embedHTML(v);
+    case 'matrix': return matrixHTML(v, ctx);
+    case 'statchart': return statchartHTML(v);
+    case 'orgchart': return orgchartHTML(v, ctx);
     case 'suspects': return suspectsHTML(v, ctx);
     case 'clues': return cluesHTML(v, ctx);
     case 'references': return referencesHTML(v);

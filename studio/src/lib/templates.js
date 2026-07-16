@@ -634,6 +634,11 @@ export function emptyValue(section){
     case 'clues': return [];
     case 'crew': return [];
     case 'dialectic': return { left: '', right: '' };
+    case 'table': return { cols: ['Column 1', 'Column 2'], rows: [['', '']] };
+    case 'embed': return [];
+    case 'matrix': return { people: [], pairs: {} };
+    case 'statchart': return { stats: [{ label: 'STR', value: 5 }, { label: 'DEX', value: 5 }, { label: 'CON', value: 5 }, { label: 'INT', value: 5 }, { label: 'WIS', value: 5 }, { label: 'CHA', value: 5 }], max: 10, view: 'radar' };
+    case 'orgchart': return { nodes: [] };
     case 'taggroups': return [];
     case 'excerpts': return [];
     case 'outline': return { acts: [] };

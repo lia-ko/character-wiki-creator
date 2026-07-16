@@ -16,6 +16,11 @@
   import Clues from './Clues.svelte';
   import Crew from './Crew.svelte';
   import Dialectic from './Dialectic.svelte';
+  import Table from './Table.svelte';
+  import Embed from './Embed.svelte';
+  import Matrix from './Matrix.svelte';
+  import Statchart from './Statchart.svelte';
+  import Orgchart from './Orgchart.svelte';
   import Ledger from './Ledger.svelte';
   import References from './References.svelte';
   import SourceNotes from './SourceNotes.svelte';
@@ -70,6 +75,16 @@
   <Crew {entry} {sec} {others} />
 {:else if sec.type === 'dialectic'}
   <Dialectic {entry} {sec} />
+{:else if sec.type === 'table'}
+  <Table {entry} {sec} />
+{:else if sec.type === 'embed'}
+  <Embed {entry} {sec} />
+{:else if sec.type === 'matrix'}
+  <Matrix {entry} {sec} {others} />
+{:else if sec.type === 'statchart'}
+  <Statchart {entry} {sec} />
+{:else if sec.type === 'orgchart'}
+  <Orgchart {entry} {sec} {others} />
 {:else if sec.type === 'ledger'}
   <Ledger {entry} {sec} />
 {:else if sec.type === 'references'}

@@ -210,8 +210,8 @@
 {/if}
 
 <style>
-  .wrap{max-width:1180px;margin:0 auto;padding:40px 26px 90px}
-  @media(min-width:1700px){ .wrap{max-width:1460px} }
+  .wrap{max-width:calc(1180px * var(--cw,1));margin:0 auto;padding:40px 26px 90px}
+  @media(min-width:1700px){ .wrap{max-width:calc(1460px * var(--cw,1))} }
   @media(max-width:640px){ .wrap{padding:24px 14px 70px} }
   .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--rule)}
   .hleft{display:flex;align-items:stretch;gap:20px;min-width:0}

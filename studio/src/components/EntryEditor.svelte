@@ -1,5 +1,5 @@
 <script>
-  import { curProject, curEntry, openProject, openEntry, markDirty, toast, addFeatureSection, delSection, hideSection, restoreSection, moveSection } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProject, openEntry, markDirty, toast, addFeatureSection, delSection, hideSection, restoreSection, moveSection, stepEntry, orderedEntries, toggleNav } from '../lib/store.svelte.js';
   import { FEATURE_GROUPS } from '../lib/features.js';
   import { dismissable } from '../lib/dismissable.js';
   import { templateFor } from '../lib/templates.js';
@@ -87,6 +87,19 @@
     return groups.map(z => ({ zone: z, secs: byZone[z] }));
   });
   const backlinks = $derived(entry ? backlinksFor(entry, project) : []);
+  const navList = $derived(project ? orderedEntries(project) : []);
+  const navIdx = $derived(navList.findIndex(e => e.id === entry?.id));
+
+  // collapse sections + jump-to (long-sheet ergonomics) — ephemeral per entry
+  let collapsed = $state(new Set());
+  let lastEntryId = null;
+  $effect(() => { if (entry && entry.id !== lastEntryId){ lastEntryId = entry.id; collapsed = new Set(); } });
+  function toggleCollapse(k){ const c = new Set(collapsed); c.has(k) ? c.delete(k) : c.add(k); collapsed = c; }
+  const jumpSecs = $derived([...mainSecs.filter(s => !s.lead), ...bandSecs]);
+  let jumpMenu = $state(false);
+  function collapseAll(){ collapsed = new Set(jumpSecs.map(s => s.key)); jumpMenu = false; }
+  function expandAll(){ collapsed = new Set(); jumpMenu = false; }
+  function jumpTo(k){ jumpMenu = false; if (collapsed.has(k)) toggleCollapse(k); requestAnimationFrame(() => document.getElementById('sec-' + k)?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }
   // sections the current Kind suggests — highlighted in the Add menu (green in the mock)
   const suggested = $derived(entry ? suggestedSections(entry) : new Set());
 
@@ -94,6 +107,13 @@
   // so any sheet (built-in or custom) can be enriched with any feature
   let secMenu = $state(false);
   function doAddFeature(feat){ addFeatureSection(entry, feat); secMenu = false; }
+  // filter the (now large) add menu — matches hidden template sections + palette features
+  let secQuery = $state('');
+  const secQ = $derived(secQuery.trim().toLowerCase());
+  const filteredAddable = $derived(secQ ? addableGroups.map(g => ({ zone: g.zone, secs: g.secs.filter(s => (s.label || '').toLowerCase().includes(secQ)) })).filter(g => g.secs.length) : addableGroups);
+  const filteredFeatures = $derived(secQ ? FEATURE_GROUPS.map(g => ({ ...g, features: g.features.filter(f => (f.name + ' ' + f.desc).toLowerCase().includes(secQ)) })).filter(g => g.features.length) : FEATURE_GROUPS);
+  function focusOnMount(node){ node.focus(); }
+  $effect(() => { if (!secMenu) secQuery = ''; });
 
   // Backfill section keys added to the template after this entry was created (e.g. Soundtrack),
   // so their fields have a value to bind to. Silent — persists on the next real edit.
@@ -102,7 +122,12 @@
 
 {#if entry && tpl}
   <div class="charbar">
+    {#if !app.navOpen}<button class="navtgl" onclick={toggleNav} title="show entries panel" aria-label="show entries">☰</button>{/if}
     <button onclick={() => openProject(project.id)}>← {project.name || 'project'}</button>
+    <span class="stepper">
+      <button onclick={() => stepEntry(-1)} disabled={navIdx <= 0} title="previous entry" aria-label="previous entry">‹</button>
+      <button onclick={() => stepEntry(1)} disabled={navIdx < 0 || navIdx >= navList.length - 1} title="next entry" aria-label="next entry">›</button>
+    </span>
     <span class="cbt">{entry.title || 'Untitled'}</span>
     <span class="badge">{tpl.label}</span>
     <label class="grp" title="organize this entry under a group">
@@ -118,6 +143,19 @@
         <button class:on={mediaSide} onclick={() => setMediaPos('side')}>Side</button>
       </span>
     {/if}
+    {#if jumpSecs.length > 3}
+      <div class="jumpwrap" use:dismissable={() => jumpMenu = false}>
+        <button class="jumpbtn" onclick={() => jumpMenu = !jumpMenu} title="jump to a section" aria-expanded={jumpMenu}>☰ Sections</button>
+        {#if jumpMenu}
+          <div class="jumpmenu">
+            <div class="jumphd"><button onclick={collapseAll}>Collapse all</button><button onclick={expandAll}>Expand all</button></div>
+            {#each jumpSecs as s (s.key)}
+              <button class="jumpitem" onclick={() => jumpTo(s.key)}>{#if collapsed.has(s.key)}<span class="jc">▸</span>{/if}{s.label}</button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
     <button class="expbtn" onclick={exportSheet} disabled={exporting}>{exporting ? 'Exporting…' : 'Export ↓'}</button>
     <button class="pvbtn btn-primary" onclick={previewEntry}>Preview ↗</button>
   </div>
@@ -132,7 +170,8 @@
         {#if sec.lead}
           <Field {entry} {sec} {others} />
         {:else if sec.custom}
-          <div class="csh">
+          <div class="csh" id="sec-{sec.key}">
+            <button class="seccol" onclick={() => toggleCollapse(sec.key)} title={collapsed.has(sec.key) ? 'expand' : 'collapse'} aria-label="collapse section">{collapsed.has(sec.key) ? '▸' : '▾'}</button>
             <input class="cshin" bind:value={sec.label} oninput={markDirty} placeholder="Heading…" />
             <div class="seccc">
               <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move section up">▲</button>
@@ -140,9 +179,10 @@
               <button class="csx" onclick={() => delSection(entry, sec.key)} title="delete section">✕</button>
             </div>
           </div>
-          <Field {entry} {sec} {others} />
+          {#if !collapsed.has(sec.key)}<Field {entry} {sec} {others} />{/if}
         {:else}
-          <div class="secwrap">
+          <div class="secwrap" id="sec-{sec.key}">
+            <button class="seccol" onclick={() => toggleCollapse(sec.key)} title={collapsed.has(sec.key) ? 'expand' : 'collapse'} aria-label="collapse section">{collapsed.has(sec.key) ? '▸' : '▾'}</button>
             <h2>{sec.label}</h2>
             <div class="seccc onhover">
               <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move section up">▲</button>
@@ -150,6 +190,7 @@
               <button class="csx" onclick={() => hideSection(entry, sec)} title="remove section">✕</button>
             </div>
           </div>
+          {#if !collapsed.has(sec.key)}<Field {entry} {sec} {others} />{/if}
           <Field {entry} {sec} {others} />
         {/if}
       {/each}
@@ -157,8 +198,9 @@
         <button class="addsecbtn" onclick={() => secMenu = !secMenu}>＋ Add section</button>
         {#if secMenu}
           <div class="addmenu">
-            {#if hiddenSecs.length}
-              {#each addableGroups as g}
+            <input class="addsearch" use:focusOnMount bind:value={secQuery} placeholder="Filter — timeline, radar, table…" spellcheck="false" />
+            {#if filteredAddable.length}
+              {#each filteredAddable as g}
                 <div class="addlabel">{g.zone}</div>
                 {#each g.secs as s}
                   <button class="addopt" class:suggested={suggested.has(s.key)} onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>{suggested.has(s.key) ? 'suggested' : 'section'}</small></button>
@@ -166,12 +208,13 @@
               {/each}
               <div class="addsep"></div>
             {/if}
-            {#each FEATURE_GROUPS as g}
+            {#each filteredFeatures as g}
               <div class="addlabel">{g.group}</div>
               {#each g.features as feat}
                 <button class="addopt" onclick={() => doAddFeature(feat)}><span>{feat.name}</span><small>{feat.desc}</small></button>
               {/each}
             {/each}
+            {#if !filteredAddable.length && !filteredFeatures.length}<div class="addnone">No features match “{secQuery}”.</div>{/if}
           </div>
         {/if}
       </div>
@@ -255,14 +298,16 @@
       {#if bandSecs.length}
         <div class="bands">
           {#each bandSecs as sec (sec.key)}
-            <div class="secwrap"><h2>{sec.label}</h2>
+            <div class="secwrap" id="sec-{sec.key}">
+              <button class="seccol" onclick={() => toggleCollapse(sec.key)} title={collapsed.has(sec.key) ? 'expand' : 'collapse'} aria-label="collapse section">{collapsed.has(sec.key) ? '▸' : '▾'}</button>
+              <h2>{sec.label}</h2>
               <div class="seccc onhover">
                 <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move up">▲</button>
                 <button class="csmv" onclick={() => moveSection(entry, sec.key, 1)} title="move down">▼</button>
                 <button class="csx" onclick={() => hideSection(entry, sec)} title="remove section">✕</button>
               </div>
             </div>
-            <Field {entry} {sec} {others} />
+            {#if !collapsed.has(sec.key)}<Field {entry} {sec} {others} />{/if}
           {/each}
         </div>
       {/if}
@@ -304,6 +349,12 @@
   .charbar{position:sticky;top:var(--appbar-h);z-index:var(--z-sticky);display:flex;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--rule);background:var(--panel);flex-wrap:wrap}
   .charbar button{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .charbar button:hover{border-color:var(--accent)}
+  .navtgl{padding:6px 9px !important;font-size:.9rem !important;line-height:1}
+  .stepper{display:inline-flex;margin-left:-4px}
+  .stepper button{padding:6px 9px;font-size:.9rem;line-height:1;border-radius:0}
+  .stepper button:first-child{border-radius:7px 0 0 7px}
+  .stepper button:last-child{border-radius:0 7px 7px 0;border-left:none}
+  .stepper button:disabled{opacity:.35;cursor:default;border-color:var(--rule)}
   .cbt{font-family:var(--head);font-size:1.1rem;color:var(--ink)}
   .badge{font-family:var(--mono);font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-soft);border:1px solid var(--rule);border-radius:20px;padding:2px 9px}
   .grp{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:7px;padding:3px 9px;background:var(--panel-2)}
@@ -319,6 +370,11 @@
   .mtoggle button:first-of-type{border-radius:7px 0 0 7px}
   .mtoggle button:last-of-type{border-radius:0 7px 7px 0;border-left:none}
   .mtoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .wctl{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
+  .wctl button{border:none;background:var(--panel-2);color:var(--faint);cursor:pointer;padding:5px 7px;border-right:1px solid var(--rule);display:flex;align-items:center}
+  .wctl button:last-child{border-right:none}
+  .wctl button:hover{color:var(--muted)}
+  .wctl button.on{color:#fff;background:var(--accent)}
   .expbtn{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .expbtn:hover{border-color:var(--accent)}
   .expbtn:disabled{opacity:.6;cursor:default}
@@ -344,6 +400,21 @@
   .secwrap:hover .seccc.onhover,.seccc.onhover:focus-within{opacity:1}
   .csmv{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:6px;cursor:pointer;padding:4px 7px;font-size:.6rem;line-height:1}
   .csmv:hover{border-color:var(--accent);color:var(--ink)}
+  /* collapse chevron + jump-to (long-sheet ergonomics) */
+  .seccol{border:none;background:none;color:var(--faint);cursor:pointer;font-size:.72rem;line-height:1;padding:3px;border-radius:4px;flex:0 0 auto}
+  .seccol:hover{color:var(--ink);background:var(--panel-2)}
+  .secwrap>.seccol{position:absolute;left:-24px;top:19px}
+  .secwrap,.csh{scroll-margin-top:calc(var(--appbar-h) + 64px)}
+  .jumpwrap{position:relative}
+  .jumpbtn{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
+  .jumpbtn:hover{border-color:var(--accent)}
+  .jumpmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);right:0;min-width:220px;max-height:min(60vh,460px);overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.35)}
+  .jumphd{display:flex;gap:6px;padding:2px 2px 6px;border-bottom:1px solid var(--rule);margin-bottom:4px}
+  .jumphd button{flex:1;font:inherit;font-size:.7rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:5px;cursor:pointer}
+  .jumphd button:hover{border-color:var(--accent);color:var(--ink)}
+  .jumpitem{display:flex;align-items:center;gap:6px;width:100%;text-align:left;font:inherit;font-size:.82rem;color:var(--muted);background:none;border:none;border-radius:6px;padding:6px 9px;cursor:pointer}
+  .jumpitem:hover{background:var(--panel-2);color:var(--ink)}
+  .jumpitem .jc{color:var(--faint);font-size:.6rem}
 
   /* zone divider (research grouped zones) */
   .zonebar{display:flex;align-items:center;gap:12px;margin:28px 0 6px}
@@ -357,6 +428,9 @@
   .addsecbtn{border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:var(--sans);font-size:.82rem}
   .addsecbtn:hover{border-color:var(--accent);color:var(--ink)}
   .addmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);left:0;min-width:240px;max-height:min(64vh,520px);overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
+  .addsearch{position:sticky;top:-6px;z-index:1;margin:-6px -6px 4px;padding:9px 11px;background:var(--panel);border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;font-size:.84rem;outline:none}
+  .addsearch::placeholder{color:var(--faint)}
+  .addnone{padding:10px 11px;color:var(--faint);font-size:.82rem}
   .addopt{display:flex;flex-direction:column;gap:1px;text-align:left;background:none;border:none;border-radius:7px;padding:8px 11px;cursor:pointer;color:var(--ink)}
   .addopt:hover{background:var(--panel-2)}
   .addopt span{font-family:var(--sans);font-size:.84rem}
@@ -365,19 +439,19 @@
   .addopt.suggested small{color:var(--ok,#4aa579)}
 
   /* outline (plot) */
-  .wrap-narrow{max-width:760px;margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:10px}
+  .wrap-narrow{max-width:calc(760px * var(--cw,1));margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:10px}
 
   /* split (character, item) */
-  .wsplit{max-width:1160px;margin:0 auto;padding:28px 30px 90px;display:grid;grid-template-columns:minmax(180px,calc(340px * var(--ps,1))) 1fr;gap:36px;align-items:start}
+  .wsplit{max-width:calc(1160px * var(--cw,1));margin:0 auto;padding:28px 30px 90px;display:grid;grid-template-columns:minmax(180px,calc(340px * var(--ps,1))) 1fr;gap:36px;align-items:start}
   .wsplit .media{position:sticky;top:calc(var(--appbar-h) + 52px)}
   .wsplit .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 
   /* hero (house, org, realm, location, event) */
-  .whero{max-width:900px;margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:14px}
+  .whero{max-width:calc(900px * var(--cw,1));margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:14px}
   .herohead{display:flex;gap:18px;align-items:center}
 
   /* infobox (lore) */
-  .wbody{display:grid;grid-template-columns:1fr 300px;max-width:1140px;margin:0 auto;gap:34px;padding:0 26px}
+  .wbody{display:grid;grid-template-columns:1fr 300px;max-width:calc(1140px * var(--cw,1));margin:0 auto;gap:34px;padding:0 26px}
   .article{padding:26px 0;min-width:0;display:flex;flex-direction:column;gap:10px}
   .infobox{padding:26px 0;display:flex;flex-direction:column;gap:10px}
   .ib-h{font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:8px 0 -2px}
@@ -395,11 +469,11 @@
   .codexrail .railaddbtn{width:100%;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:8px;cursor:pointer;font-family:var(--sans);font-size:.78rem}
   .codexrail .railaddbtn:hover{border-color:var(--accent);color:var(--ink)}
   /* full-width bands (below the codex columns) */
-  .bands{max-width:1140px;margin:8px auto 0;padding:0 26px;display:flex;flex-direction:column;gap:4px}
+  .bands{max-width:calc(1140px * var(--cw,1));margin:8px auto 0;padding:0 26px;display:flex;flex-direction:column;gap:4px}
   @media(max-width:640px){ .bands{padding:0 14px} }
 
   /* backlinks ("Linked from") */
-  .backrefs{max-width:900px;margin:8px auto 0;padding:8px 26px 90px}
+  .backrefs{max-width:calc(900px * var(--cw,1));margin:8px auto 0;padding:8px 26px 90px}
   .backrefs h2{margin-bottom:4px}
   .brhint{color:var(--faint);font-size:.76rem;font-style:italic;margin:0 0 14px}
   .brlist{display:flex;flex-direction:column;gap:8px}

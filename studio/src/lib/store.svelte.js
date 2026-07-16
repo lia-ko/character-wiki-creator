@@ -1,6 +1,6 @@
 /* ============ REACTIVE APP STATE (Svelte 5 runes) ============ */
 import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySectionsOf, newCustomType, duplicateType, importTypeToProject, typeId, slugify } from './model.js';
-import { emptyValue, rebuildCustomTypes, isCustomType, customTypeById } from './templates.js';
+import { emptyValue, rebuildCustomTypes, isCustomType, customTypeById, ENTRY_TYPES } from './templates.js';
 import { sectionFromFeature } from './features.js';
 import { idbSet, idbGet } from './persist.js';
 
@@ -12,6 +12,7 @@ export const app = $state({
   mode: 'edit',       // 'edit' | 'preview'
   dirty: false,
   searchOpen: false,
+  navOpen: true,      // in-editor entry sidebar
   trashOpen: false,
   histIndex: 0,       // mirrored from the (non-reactive) history stack for UI enable/disable
   histLen: 1,
@@ -205,6 +206,34 @@ export function moveSection(entry, key, dir){
 }
 
 /* ---- navigation ---- */
+// content width (workspace-wide): scales the layout max-widths so wide screens aren't dead space
+export const CW_FACTOR = { normal: 1, wide: 1.45, full: 100 };
+export function setContentWidth(w){ app.ws.contentWidth = w; markDirty(); }
+// entries in a stable nav order (built-in type order, then the project's custom types)
+export function orderedEntries(p){
+  if (!p) return [];
+  const order = [...ENTRY_TYPES, ...(p.types || []).map(t => t.type)];
+  const byType = {}; (p.entries || []).forEach(e => (byType[e.type] || (byType[e.type] = [])).push(e));
+  const out = [], seen = new Set();
+  for (const t of order) (byType[t] || []).forEach(e => { out.push(e); seen.add(e.id); });
+  (p.entries || []).forEach(e => { if (!seen.has(e.id)) out.push(e); });   // any stragglers
+  return out;
+}
+// rename a group: retarget every entry of `type` whose group === oldName to newName ('' = ungrouped)
+export function renameGroup(type, oldName, newName){
+  const p = curProject(); if (!p) return;
+  const from = (oldName || '').trim(), to = (newName || '').trim();
+  if (from === to) return;
+  let n = 0;
+  for (const e of p.entries || []){ if (e.type === type && (e.group || '').trim() === from){ e.group = to; n++; } }
+  if (n){ markDirty(); toast(to ? `Renamed group to “${to}”` : 'Group cleared'); }
+}
+export function toggleNav(){ app.navOpen = !app.navOpen; }
+export function stepEntry(dir){
+  const p = curProject(); if (!p) return;
+  const list = orderedEntries(p), i = list.findIndex(e => e.id === app.entryId), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return; openEntry(list[j].id);
+}
 export function openProjects(){ app.view = 'projects'; }
 export function openProject(id){ app.projectId = id; app.view = 'project'; }
 export function openEntry(id){ app.entryId = id; app.view = 'entry'; app.mode = 'edit'; }

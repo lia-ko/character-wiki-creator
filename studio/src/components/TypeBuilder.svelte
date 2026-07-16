@@ -10,6 +10,11 @@
   const t = $derived((app.ws.typeLibrary || []).find(x => x.type === app.builderTypeId) || null);
   let selKey = $state(null);
   let paletteOpen = $state(false);
+  let palQuery = $state('');
+  const palQ = $derived(palQuery.trim().toLowerCase());
+  const filteredPalette = $derived(palQ ? FEATURE_GROUPS.map(g => ({ ...g, features: g.features.filter(f => (f.name + ' ' + f.desc).toLowerCase().includes(palQ)) })).filter(g => g.features.length) : FEATURE_GROUPS);
+  function focusOnMount(node){ node.focus(); }
+  $effect(() => { if (!paletteOpen) palQuery = ''; });
   const sel = $derived(t ? t.sections.find(s => s.key === selKey) : null);
   const curLayout = $derived(t ? layoutId(t) : 'hero-none');
 
@@ -46,6 +51,11 @@
       case 'timeline': return { eras: [{ id: 'e1', name: 'An era', span: '' }], entries: [{ id: 'b1', eraId: 'e1', date: 'Year 1', title: 'A first beat', body: 'What happened.', key: true, links: [] }, { id: 'b2', eraId: 'e1', date: 'Year 2', title: 'A later beat', body: 'And then this.', key: false, links: [] }], threads: [], view: 'chronicle' };
       case 'history': return [{ date: 'Year 1', title: 'A beat', body: 'What happened.', key: true }, { date: 'Year 2', title: 'Another beat', body: 'And then this.', key: false }];
       case 'chronology': return [{ date: 'Year 1', text: 'A dated event', targetId: '' }];
+      case 'table': return { cols: ['Column A', 'Column B', 'Column C'], rows: [['row 1', 'a value', 'a value'], ['row 2', 'a value', 'a value']] };
+      case 'embed': return [{ url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', caption: 'A sample embed' }];
+      case 'matrix': return { people: [{ id: 'a', targetId: '', name: 'Ada' }, { id: 'b', targetId: '', name: 'Bran' }, { id: 'c', targetId: '', name: 'Cass' }], pairs: { 'a|b': 'ally', 'b|c': 'enemy', 'a|c': 'rival' } };
+      case 'statchart': return { stats: [{ label: 'STR', value: 8 }, { label: 'DEX', value: 5 }, { label: 'CON', value: 7 }, { label: 'INT', value: 3 }, { label: 'WIS', value: 6 }, { label: 'CHA', value: 9 }], max: 10, view: 'radar' };
+      case 'orgchart': return { nodes: [{ id: 'r', targetId: '', name: '', title: 'Commander', parentId: '' }, { id: 'a', targetId: '', name: '', title: 'First officer', parentId: 'r' }, { id: 'b', targetId: '', name: '', title: 'Quartermaster', parentId: 'r' }, { id: 'c', targetId: '', name: '', title: 'Sergeant', parentId: 'a' }] };
       case 'arc': return { type: 'positive', pos: null, believes: 'Where it begins', is: 'the starting state', turn: 'the crucible', learns: 'where it ends', becomes: 'the new state', want: 'the drive', need: 'the truth' };
       case 'dialectic': return { left: 'One position, stated.', right: 'The counter-position.' };
       case 'rulelist': return s.variant === 'cancant' ? [{ text: 'Something it can do', kind: 'can' }, { text: 'Something it can’t', kind: 'cant' }] : [{ text: 'A first rule', kind: '' }, { text: 'A second rule', kind: '' }];
@@ -55,7 +65,6 @@
       case 'dyad': return { a: { targetId: '', role: 'one' }, b: { targetId: '', role: 'the other' }, dynamic: 'their dynamic', status: 'status', tension: 'the tension between them.', sides: { a: { wants: 'wants', fears: 'fears', hides: 'won’t admit', sees: 'sees them as' }, b: { wants: 'wants', fears: 'fears', hides: 'won’t admit', sees: 'sees them as' } } };
       case 'suspects': return [{ targetId: '', name: 'A suspect', motive: 'a motive', means: 'the means', opportunity: 'the chance', alibi: 'their alibi', alibiStatus: 'unc', suspicion: 2, guilty: false }];
       case 'clues': return [{ name: 'A clue', kind: 'genuine', reads: 'what it seems to say', means: 'what it really means', implicates: '', planted: 'ch. 1', targetId: '' }];
-      case 'chronology': return [{ date: 'Year 1', text: 'A dated event', targetId: '' }];
       case 'sourcenotes': return { chapters: [{ id: 'c1', title: 'Chapter 1', pages: '', summary: 'A chapter summary.', state: 'now', notes: [{ id: 'n1', type: 'fact', page: '1', body: 'A sample note.', tags: [] }] }] };
       default: return undefined;   // leave the seeded empty value (shows a heading + placeholder)
     }
@@ -124,7 +133,8 @@
         <button class="addfeat" onclick={() => paletteOpen = !paletteOpen}>＋ Add a feature</button>
         {#if paletteOpen}
           <div class="palette">
-            {#each FEATURE_GROUPS as g}
+            <input class="palsearch" use:focusOnMount bind:value={palQuery} placeholder="Filter features — timeline, radar, table…" spellcheck="false" />
+            {#each filteredPalette as g}
               <div class="pgh" style="color:{g.color}">{g.group}</div>
               <div class="pgrid">
                 {#each g.features as feat}
@@ -135,6 +145,7 @@
                 {/each}
               </div>
             {/each}
+            {#if !filteredPalette.length}<div class="palnone">No features match “{palQuery}”.</div>{/if}
           </div>
         {/if}
       </div>
@@ -267,6 +278,9 @@
   .addfeat{width:100%;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:10px;padding:11px;cursor:pointer;font:inherit;font-size:.82rem}
   .addfeat:hover{border-color:var(--accent);color:var(--ink)}
   .palette{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 6px);max-height:56vh;overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);padding:12px 14px}
+  .palsearch{position:sticky;top:-12px;z-index:1;margin:-12px -14px 8px;padding:10px 14px;background:var(--panel);border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;font-size:.86rem;outline:none}
+  .palsearch::placeholder{color:var(--faint)}
+  .palnone{padding:8px 2px;color:var(--faint);font-size:.82rem}
   .pgh{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;margin:10px 0 7px}.pgh:first-child{margin-top:0}
   .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
   .pcard{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--rule);border-radius:9px;background:var(--panel-2);padding:8px 10px;cursor:pointer;text-align:left}

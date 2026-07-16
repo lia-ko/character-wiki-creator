@@ -8,6 +8,7 @@ import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES, rebuildCustomTypes 
 export function migrateWorkspace(ws){
   if (!Array.isArray(ws.trash)) ws.trash = [];
   if (!Array.isArray(ws.typeLibrary)) ws.typeLibrary = [];   // the user's custom-type library
+  if (!ws.contentWidth) ws.contentWidth = 'normal';          // content width: normal | wide | full
   (ws?.projects || []).forEach(p => {
     if (p.portraitScale == null) p.portraitScale = 1;
     if (p.cover == null) p.cover = '';
@@ -108,7 +109,7 @@ export function createWorkspace(){
   return {
     title: 'Your World', palette: 'slate',
     headFont: 'playfair-display', bodyFont: 'eb-garamond', headScale: 1, bodyScale: 1,
-    projects: [p], trash: [], typeLibrary: [],
+    projects: [p], trash: [], typeLibrary: [], contentWidth: 'normal',
   };
 }
 

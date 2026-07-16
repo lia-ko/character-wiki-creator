@@ -1,5 +1,5 @@
 <script>
-  import { app, curProject, curEntry, openProjects, openProject, openSearch, openTrash, undo, redo, clearDirty, markDirty, saveNow, toast } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProjects, openProject, openSearch, openTrash, undo, redo, clearDirty, markDirty, saveNow, toast, setContentWidth } from '../lib/store.svelte.js';
   import { slugify, migrateWorkspace } from '../lib/model.js';
   import { buildWorkspace } from '../lib/build.js';
   import { download } from '../lib/download.js';
@@ -53,6 +53,11 @@
     {/if}
   </span>
   <span class="grow"></span>
+  <span class="wctl wideact" role="group" aria-label="content width" title="content width">
+    <button class:on={(app.ws.contentWidth || 'normal') === 'normal'} onclick={() => setContentWidth('normal')} title="narrow" aria-label="narrow content"><svg width="18" height="10"><rect x="5" y="3" width="8" height="4" rx="1" fill="currentColor"/></svg></button>
+    <button class:on={app.ws.contentWidth === 'wide'} onclick={() => setContentWidth('wide')} title="wide" aria-label="wide content"><svg width="18" height="10"><rect x="2" y="3" width="14" height="4" rx="1" fill="currentColor"/></svg></button>
+    <button class:on={app.ws.contentWidth === 'full'} onclick={() => setContentWidth('full')} title="full width" aria-label="full-width content"><svg width="18" height="10"><rect x="0" y="3" width="18" height="4" rx="1" fill="currentColor"/></svg></button>
+  </span>
   <button class="search" onclick={openSearch} title="Search (⌘K)"><span class="si">⌕</span><span class="slabel"> Search </span><kbd>⌘K</kbd></button>
   {#if app.dirty}<span class="unsaved"><span class="u"></span> unsaved</span>{/if}
   <button class="abtn ico" onclick={undo} disabled={app.histIndex <= 0} title="Undo (⌘Z)">↶</button>
@@ -88,6 +93,11 @@
   .search:hover{border-color:var(--accent);color:var(--ink)}
   .search .si{color:var(--accent-soft);font-size:.95rem}
   .search kbd{font-family:var(--mono);font-size:.6rem;background:var(--panel);border:1px solid var(--rule);border-radius:4px;padding:1px 5px;color:var(--faint)}
+  .wctl{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .wctl button{border:none;background:var(--panel-2);color:var(--faint);cursor:pointer;padding:6px 7px;border-right:1px solid var(--rule);display:flex;align-items:center}
+  .wctl button:last-child{border-right:none}
+  .wctl button:hover{color:var(--muted)}
+  .wctl button.on{color:#fff;background:var(--accent)}
   .unsaved{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;gap:6px;white-space:nowrap}
   .unsaved .u{width:7px;height:7px;border-radius:50%;background:var(--accent)}
   .abtn{font:inherit;font-size:.78rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:7px 13px;cursor:pointer;white-space:nowrap}

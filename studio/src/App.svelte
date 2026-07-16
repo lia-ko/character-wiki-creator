@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { app, themeFor, restoreWorkspace, saveNow, undo, redo } from './lib/store.svelte.js';
+  import { app, themeFor, restoreWorkspace, saveNow, undo, redo, CW_FACTOR } from './lib/store.svelte.js';
   import { paletteVars, palById, fontVars, fontFaceCSS } from './lib/theme.js';
 
   const isEditable = (el) => el && (el.isContentEditable || /^(input|textarea|select)$/i.test(el.tagName));
@@ -27,6 +27,7 @@
   import ProjectView from './components/ProjectView.svelte';
   import EntryEditor from './components/EntryEditor.svelte';
   import TypeBuilder from './components/TypeBuilder.svelte';
+  import EntryNav from './components/EntryNav.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import TrashPanel from './components/TrashPanel.svelte';
   import Toast from './components/Toast.svelte';
@@ -60,7 +61,8 @@
 <Toast />
 <ConfirmDialog />
 
-<div class="stage">
+{#if app.view === 'entry' && app.navOpen}<EntryNav />{/if}
+<div class="stage" class:withnav={app.view === 'entry' && app.navOpen} style="--cw:{CW_FACTOR[app.ws.contentWidth] || 1}">
   {#if app.view === 'projects'}
     <ProjectsView />
   {:else if app.view === 'project'}
@@ -74,4 +76,6 @@
 
 <style>
   .stage{ padding-top: var(--appbar-h); min-height: 100vh; }
+  .stage.withnav{ padding-left: 250px; }
+  @media(max-width:900px){ .stage.withnav{ padding-left: 0; } }   /* narrow: the panel overlays instead of shifting */
 </style>
