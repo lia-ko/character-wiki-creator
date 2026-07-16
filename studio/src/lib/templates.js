@@ -215,6 +215,27 @@ export const TEMPLATES = {
       { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
+  /* ---- operation: the mission plan — heist, spy op, infiltration, con. The leanest genre
+     pack: only the `crew` roster (operatives w/ portraits + cover identities + read-in flag)
+     is new; the plan reuses History, risks↔contingencies reuse DefList, and the twist +
+     aftermath reuse the `sealed` spoiler. Links out to the Characters/Places/Orgs it touches. */
+  operation: {
+    type: 'operation', label: 'Operation', plural: 'Operations', icon: '◎', layout: 'hero', media: 'none',
+    title: { ph: 'Operation name (e.g. Operation: Cold Harbor)' }, subtitle: { ph: 'the mission (optional)' },
+    sections: [
+      { key: 'objective', label: 'Objective', type: 'richline', slot: 'main', lead: true },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Target','Backing','Window','Status'] },
+      { key: 'stakes', label: 'What’s riding on it', type: 'richline', slot: 'main', optional: true },
+      { key: 'crew', label: 'The crew', type: 'crew', slot: 'main' },
+      { key: 'mark', label: 'The mark', type: 'richsections', slot: 'main', optional: true },
+      { key: 'plan', label: 'The plan', type: 'history', slot: 'main' },
+      { key: 'risks', label: 'Risks & contingencies', type: 'deflist', slot: 'main', variant: 'risks', termPh: 'If…', defPh: 'then…', addLabel: 'contingency', optional: true },
+      { key: 'assets', label: 'Assets', type: 'relations', slot: 'main', display: 'expand', optional: true, addLabel: 'asset' },
+      { key: 'twist', label: 'The real plan', type: 'richsections', slot: 'main', sealed: true, optional: true },
+      { key: 'aftermath', label: 'Aftermath', type: 'richsections', slot: 'main', sealed: true, optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
   lore: {
     type: 'lore', label: 'Lore', plural: 'Lore', icon: '❋', layout: 'infobox',
     title: { ph: 'Concept / topic' }, subtitle: { ph: 'category (optional)' },
@@ -465,6 +486,75 @@ export const TEMPLATES = {
     ],
   },
 
+  /* ---- theme: the argument the book is making — promoted from a Lore entry to a real sheet.
+     A statement + the counter-argument it's tested against (the `dialectic` field), the
+     dramatic question, the motifs (deflist: what it carries · how it turns), the carriers
+     (ties tagged embodies/complicates/refutes), key lines (excerpts), and a sealed "where
+     it lands" resolution. ---- */
+  theme: {
+    type: 'theme', label: 'Theme', plural: 'Themes', icon: '❉', layout: 'hero', media: 'none',
+    title: { ph: 'The theme (e.g. The doomed cause)' }, subtitle: { ph: 'in a word or two (optional)' },
+    sections: [
+      { key: 'summary', label: 'In a line', type: 'richline', slot: 'main', lead: true },
+      { key: 'dialectic', label: 'The argument', type: 'dialectic', slot: 'main', leftLabel: 'The book argues', rightLabel: 'But —', leftTint: '#7f9ac9', rightTint: '#c98a6a' },
+      { key: 'question', label: 'The question', type: 'richline', slot: 'main', optional: true },
+      { key: 'motifs', label: 'Motifs & symbols', type: 'deflist', slot: 'main', variant: 'motifs', termPh: 'motif / symbol', defPh: 'what it carries', notePh: 'how it turns', addLabel: 'motif', optional: true },
+      { key: 'carriers', label: 'Who tests it', type: 'ties', slot: 'main', optional: true, linkTypes: ['character','relationship','event'], namePh: 'character / scene', notePh: 'how they carry it', addLabel: 'carrier', kinds: [{ v: 'embody', l: 'Embodies', c: '#5aa06f' }, { v: 'complicate', l: 'Complicates', c: '#c9a24a' }, { v: 'refute', l: 'Refutes', c: '#b0596a' }] },
+      { key: 'lines', label: 'Key lines', type: 'excerpts', slot: 'main', optional: true },
+      { key: 'landing', label: 'Where it lands', type: 'richsections', slot: 'main', sealed: true, optional: true },
+    ],
+  },
+
+  /* ---- setting: a place held as ATMOSPHERE (a childhood home, a room where it happened),
+     not the gazetteer. The five `senses` (a deflist pre-seeded with Sight…Taste), what it
+     `holds` (memory), whose place it is (ties: home/prize/haunt), its role, a then/now
+     `dialectic`, and a cross-link to the same place's mapped Location. ---- */
+  setting: {
+    type: 'setting', label: 'Setting', plural: 'Settings', icon: '❈', layout: 'hero', media: 'feature',
+    title: { ph: 'The place (e.g. The hearth-hall at Kadmar)' }, subtitle: { ph: 'a place that matters (optional)' },
+    sections: [
+      { key: 'summary', label: 'What it feels like', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Belongs to','Feeling','When'] },
+      { key: 'senses', label: 'The senses', type: 'deflist', slot: 'main', variant: 'senses', termPh: 'sense', defPh: 'what you notice', addLabel: 'sense', rowDefaults: [{ term: 'Sight', def: '', note: '' }, { term: 'Sound', def: '', note: '' }, { term: 'Smell', def: '', note: '' }, { term: 'Touch', def: '', note: '' }, { term: 'Taste', def: '', note: '' }] },
+      { key: 'holds', label: 'What it holds', type: 'richsections', slot: 'main' },
+      { key: 'whose', label: 'Whose place it is', type: 'ties', slot: 'main', optional: true, linkTypes: ['character'], namePh: 'character', notePh: 'how they feel it', addLabel: 'person', kinds: [{ v: 'home', l: 'Home', c: '#5aa06f' }, { v: 'prize', l: 'A prize', c: '#c9a24a' }, { v: 'haunt', l: 'A haunt', c: '#b0596a' }, { v: 'refuge', l: 'A refuge', c: '#5f8fb0' }, { v: 'other', l: '—', c: '#9aa1a8' }] },
+      { key: 'role', label: 'Its role in the story', type: 'richsections', slot: 'main', optional: true },
+      { key: 'thennow', label: 'Then / now', type: 'dialectic', slot: 'main', leftLabel: 'Then', rightLabel: 'Now', leftTint: '#d9a066', rightTint: '#5f8fb0', sep: '→', optional: true },
+      { key: 'mapped', label: 'Also on the map', type: 'relations', slot: 'main', optional: true, display: 'expand', linkTypes: ['location','realm','dwelling'], addLabel: 'place' },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- entity / threat: the horror antagonist — monster, haunting, curse, eldritch force.
+     Built entirely from existing fields: prey = DefList (who→why), abilities/tells/banes =
+     taggroups, its rules = the rulelist Can/Can’t block relabeled "How it hunts / What binds
+     it", dread = a meter, sightings & the toll = History logs, how-to-end-it = a sealed
+     section. Pairs with System/Rules (a cursed magic), a haunted place, and its victims. ---- */
+  entity: {
+    type: 'entity', label: 'Entity / Threat', plural: 'Threats', icon: '☾', layout: 'codex',
+    title: { ph: 'The threat (e.g. The Rime)' }, subtitle: { ph: 'monster · haunting · curse · force' },
+    sections: [
+      { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
+      /* aside rail */
+      { key: 'gallery', label: 'Depiction', type: 'gallery', slot: 'aside' },
+      { key: 'stats', label: 'Nature', type: 'stats', slot: 'aside', defaults: ['Kind','Origin','First seen','Status'] },
+      { key: 'dread', label: 'Dread level', type: 'meter', slot: 'aside', levels: ['Rumor','Stalking','Hunting','Unbound'], optional: true },
+      { key: 'banes', label: 'Banes & weaknesses', type: 'taggroups', slot: 'aside', optional: true },
+      /* article */
+      { key: 'wants', label: 'What it wants', type: 'richsections', slot: 'main' },
+      { key: 'prey', label: 'Its prey', type: 'deflist', slot: 'main', variant: 'prey', termPh: 'who it takes', defPh: 'why', addLabel: 'prey', optional: true },
+      { key: 'abilities', label: 'Abilities', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'rules', label: 'Its rules', type: 'rulelist', slot: 'main', variant: 'cancant', canLabel: 'How it hunts', cantLabel: 'What binds it', optional: true },
+      { key: 'tells', label: 'The tells', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'sightings', label: 'Sightings', type: 'history', slot: 'main', optional: true },
+      { key: 'toll', label: 'The toll', type: 'history', slot: 'main', optional: true },
+      { key: 'related', label: 'Connections', type: 'relations', slot: 'main', optional: true },
+      { key: 'ending', label: 'How to end it', type: 'richsections', slot: 'main', sealed: true, optional: true },
+      { key: 'excerpts', label: 'Lore & accounts', type: 'excerpts', slot: 'main', optional: true },
+    ],
+  },
+
   /* ---- shared deep single-subject sheet: any catalog item can link out to one ---- */
   article: {
     type: 'article', label: 'Article', plural: 'Articles', icon: '◆', layout: 'split',
@@ -481,17 +571,17 @@ export const TEMPLATES = {
 };
 
 // Display order for the type picker / project view.
-export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','lore','item','system','power','research','source','article'];
+export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','setting','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','operation','theme','lore','item','system','power','entity','research','source','article'];
 
 // Type families — group the entry types for the project-view category filter + the
 // "New entry" picker. Source of truth for section order too (people → places → nature → culture → story → lore).
 export const FAMILIES = [
   { key: 'people',  label: 'People',  types: ['character','relationship','house','organization','species'] },
-  { key: 'places',  label: 'Places',  types: ['realm','location','business','dwelling'] },
+  { key: 'places',  label: 'Places',  types: ['realm','location','setting','business','dwelling'] },
   { key: 'nature',  label: 'Nature',  types: ['flora','fauna'] },
   { key: 'culture', label: 'Culture', types: ['religion','beliefs','folklore','language'] },
-  { key: 'story',   label: 'Story',   types: ['event','plot','timeline','case','clue'] },
-  { key: 'lore',    label: 'Lore',    types: ['lore','item','system','power','research','source','article'] },
+  { key: 'story',   label: 'Story',   types: ['event','plot','timeline','case','clue','operation','theme'] },
+  { key: 'lore',    label: 'Lore',    types: ['lore','item','system','power','entity','research','source','article'] },
 ];
 
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
@@ -523,6 +613,8 @@ export function emptyValue(section){
     case 'dyad': return { a: { targetId: '', role: '' }, b: { targetId: '', role: '' }, dynamic: '', status: '', tension: '', sides: { a: { wants: '', fears: '', hides: '', sees: '' }, b: { wants: '', fears: '', hides: '', sees: '' } } };
     case 'suspects': return [];
     case 'clues': return [];
+    case 'crew': return [];
+    case 'dialectic': return { left: '', right: '' };
     case 'taggroups': return [];
     case 'excerpts': return [];
     case 'outline': return { acts: [] };

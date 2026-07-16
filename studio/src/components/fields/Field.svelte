@@ -14,6 +14,8 @@
   import Dyad from './Dyad.svelte';
   import Suspects from './Suspects.svelte';
   import Clues from './Clues.svelte';
+  import Crew from './Crew.svelte';
+  import Dialectic from './Dialectic.svelte';
   import Ledger from './Ledger.svelte';
   import References from './References.svelte';
   import SourceNotes from './SourceNotes.svelte';
@@ -64,6 +66,10 @@
   <Suspects {entry} {sec} {others} />
 {:else if sec.type === 'clues'}
   <Clues {entry} {sec} {others} />
+{:else if sec.type === 'crew'}
+  <Crew {entry} {sec} {others} />
+{:else if sec.type === 'dialectic'}
+  <Dialectic {entry} {sec} />
 {:else if sec.type === 'ledger'}
   <Ledger {entry} {sec} />
 {:else if sec.type === 'references'}

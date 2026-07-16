@@ -51,6 +51,8 @@ export function createEntry(type, name){
     if (sec.type === 'gauges' && Array.isArray(sec.gaugeDefaults)){
       data[sec.key] = sec.gaugeDefaults.map(g => g.text ? { label: g.label, text: true, value: '' } : { label: g.label, levels: (g.levels || []).slice(), at: 0 });
     }
+    // pre-seed fixed starter rows for a list field (e.g. Setting's five senses)
+    if (Array.isArray(sec.rowDefaults)) data[sec.key] = sec.rowDefaults.map(r => ({ ...r }));
   });
   const entry = { id: uid(), type, title: name || ('New ' + tpl.label.toLowerCase()), subtitle: '', group: '', data };
   // sections flagged `optional` start hidden — the entry opens on a lean core, the rest

@@ -4,6 +4,8 @@
   let { entry, sec } = $props();
   const list = $derived(Array.isArray(entry.data[sec.key]) ? entry.data[sec.key] : []);
   const variant = $derived(sec.variant || 'laws');
+  const canL = $derived(sec.canLabel || 'it can');
+  const cantL = $derived(sec.cantLabel || 'it can’t');
 
   function add(){ list.push({ text: '', kind: variant === 'cancant' ? 'can' : '' }); markDirty(); }
   async function del(i){ const r = list[i]; if (!(await confirmDelete(r.text && r.text.trim(), r.text ? '“' + r.text + '”' : 'this rule'))) return; list.splice(i, 1); markDirty(); }
@@ -15,10 +17,10 @@
     {#each list as r, i (i)}
       <div class="rrow">
         <span class="seg">
-          <button class:on={r.kind !== 'cant'} data-k="can" onclick={() => setKind(i, 'can')} title="it can" aria-label="it can">✓</button>
-          <button class:on={r.kind === 'cant'} data-k="cant" onclick={() => setKind(i, 'cant')} title="it can’t" aria-label="it can’t">✕</button>
+          <button class:on={r.kind !== 'cant'} data-k="can" onclick={() => setKind(i, 'can')} title={canL} aria-label={canL}>✓</button>
+          <button class:on={r.kind === 'cant'} data-k="cant" onclick={() => setKind(i, 'cant')} title={cantL} aria-label={cantL}>✕</button>
         </span>
-        <input class={r.kind === 'cant' ? 'cant' : 'can'} bind:value={r.text} oninput={markDirty} placeholder={r.kind === 'cant' ? 'it can’t…' : 'it can…'} />
+        <input class={r.kind === 'cant' ? 'cant' : 'can'} bind:value={r.text} oninput={markDirty} placeholder={(r.kind === 'cant' ? cantL : canL) + '…'} />
         <Reorder {list} {i} />
         <button class="del" onclick={() => del(i)} title="remove" aria-label="remove">✕</button>
       </div>

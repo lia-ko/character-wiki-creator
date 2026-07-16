@@ -259,6 +259,35 @@ function dyadHTML(v, ctx){
   const sides = (sa2 || sb2) ? `<div class="dsides">${sa2}${sb2}</div>` : '';
   return `<div class="dyad">${head}${tension}${sides}</div>`;
 }
+// two-column dialectic (Theme statement↔counter, Setting then→now)
+function dialecticHTML(v, sec){
+  if (!v || typeof v !== 'object') return '';
+  const left = (v.left || '').trim(), right = (v.right || '').trim();
+  if (!left && !right) return '';
+  const ll = (sec && sec.leftLabel) || 'On one hand', rl = (sec && sec.rightLabel) || 'On the other';
+  const lt = (sec && sec.leftTint) || '#7f9ac9', rt = (sec && sec.rightTint) || '#c98a6a';
+  const sep = (sec && sec.sep) || '↔';
+  const side = (label, tint, text) => `<div class="dside" style="--dt:${tint}"><div class="dsh">${esc(label)}</div><p>${esc(text)}</p></div>`;
+  return `<div class="dialecticbox">${side(ll, lt, left)}<div class="dvs">${esc(sep)}</div>${side(rl, rt, right)}</div>`;
+}
+// operation crew — roster cards with portraits (pulled from the linked Character), role,
+// cover identity, job, and "the angle". The read-in flag is writer-only (not rendered here).
+const CREW_STATUS = { in: 'in', wildcard: 'wildcard', burned: 'burned', lost: 'lost' };
+function crewHTML(list, ctx){
+  if (!Array.isArray(list) || !list.length) return '';
+  const cards = list.map(r => {
+    const nm = (r.targetId && ctx.title && ctx.title(r.targetId)) || r.name || 'Operative';
+    const href = r.targetId && ctx.href && ctx.href(r.targetId);
+    const cover = r.targetId && ctx.cover && ctx.cover(r.targetId);
+    const port = cover ? `<span class="oport" style="background-image:url(${esc(cover)})"></span>` : `<span class="oport empty">${esc((nm || '?').slice(0, 1))}</span>`;
+    const name = href ? `<a href="${esc(href)}">${esc(nm)}</a>` : esc(nm);
+    const st = r.status && CREW_STATUS[r.status] ? `<span class="ostatus ${r.status}">${CREW_STATUS[r.status]}</span>` : '';
+    const row = (k, v, cls = '') => v && v.trim() ? `<div class="orow ${cls}"><span class="ok">${k}</span><span class="ov">${esc(v)}</span></div>` : '';
+    const rows = row('cover', r.cover, 'cover') + row('job', r.job) + row('the angle', r.angle, 'angle');
+    return `<div class="op${r.status === 'wildcard' ? ' wild' : ''}">${st}${port}<div class="opm"><div class="optop"><span class="onm">${name}</span>${r.role ? `<span class="orole">${esc(r.role)}</span>` : ''}</div>${rows ? `<div class="orows">${rows}</div>` : ''}</div></div>`;
+  }).join('');
+  return `<div class="crewgrid">${cards}</div>`;
+}
 // case suspects grid — motive/means/opportunity/alibi(+status)/suspicion. The guilty flag is
 // writer-only and is NOT rendered here (the reveal lives in the sealed solution).
 const ALIBI_LABEL = { ok: 'confirmed', unc: 'unconfirmed', broken: 'broken' };
@@ -302,8 +331,9 @@ function rulelistHTML(list, sec){
   if (!items.length) return '';
   if ((sec && sec.variant) === 'cancant'){
     const can = items.filter(r => r.kind !== 'cant'), cant = items.filter(r => r.kind === 'cant');
-    const col = (h, arr, cls) => arr.length ? `<div class="rcc ${cls}"><div class="rcch">${h}</div><ul>${arr.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul></div>` : '';
-    return `<div class="rcancant">${col('✓ It can', can, 'can')}${col('✕ It can’t', cant, 'cant')}</div>`;
+    const canL = (sec && sec.canLabel) || 'It can', cantL = (sec && sec.cantLabel) || 'It can’t';
+    const col = (h, arr, cls) => arr.length ? `<div class="rcc ${cls}"><div class="rcch">${esc(h)}</div><ul>${arr.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul></div>` : '';
+    return `<div class="rcancant">${col('✓ ' + canL, can, 'can')}${col('✕ ' + cantL, cant, 'cant')}</div>`;
   }
   return `<ol class="rlaws">${items.map(r => `<li>${esc(r.text)}</li>`).join('')}</ol>`;
 }
@@ -461,11 +491,16 @@ function historyHTML(list, ctx){
 }
 // ties: relations with other groups (linked, colour-keyed by kind)
 const TIE_KINDS = { ally: { l: 'Ally', c: '#5aa06f' }, enemy: { l: 'Enemy', c: '#c05348' }, rival: { l: 'Rival', c: '#b9853a' }, wary: { l: 'Wary', c: '#b9853a' }, kin: { l: 'Kin', c: '#5f8fb0' }, patron: { l: 'Patron', c: '#5f8fb0' }, subject: { l: 'Subject', c: '#9aa1a8' }, other: { l: 'Tie', c: '#9aa1a8' } };
-function tiesHTML(list, ctx){
+const cap = (s) => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
+function tiesHTML(list, sec, ctx){
   if (!list || !list.length) return '<p class="empty">No ties yet.</p>';
+  const kmap = (sec && Array.isArray(sec.kinds) && sec.kinds.length)
+    ? Object.fromEntries(sec.kinds.map(k => [k.v, { l: k.l || cap(k.v), c: k.c || '#9aa1a8' }]))
+    : TIE_KINDS;
+  const fallback = Object.values(kmap)[0] || { l: 'Tie', c: '#9aa1a8' };
   const cards = list.map(r => {
     if (!(r.name && r.name.trim()) && !r.targetId) return '';
-    const t = TIE_KINDS[r.kind] || TIE_KINDS.other;
+    const t = kmap[r.kind] || fallback;
     const h = r.targetId && ctx.href && ctx.href(r.targetId);
     const nm = esc(r.name || (ctx.title && ctx.title(r.targetId)) || '—');
     const name = h ? `<a href="${esc(h)}">${nm}</a>` : nm;
@@ -555,6 +590,8 @@ function fieldHTML(entry, sec, ctx){
     case 'arc': return arcHTML(v, ctx, sec);
     case 'rulelist': return rulelistHTML(v, sec);
     case 'dyad': return dyadHTML(v, ctx);
+    case 'crew': return crewHTML(v, ctx);
+    case 'dialectic': return dialecticHTML(v, sec);
     case 'suspects': return suspectsHTML(v, ctx);
     case 'clues': return cluesHTML(v, ctx);
     case 'references': return referencesHTML(v);
@@ -569,7 +606,7 @@ function fieldHTML(entry, sec, ctx){
     case 'lineage': return lineageHTML(v, ctx);
     case 'familytree': return familyTreeHTML(v, ctx);
     case 'history': return historyHTML(v, ctx);
-    case 'ties': return tiesHTML(v, ctx);
+    case 'ties': return tiesHTML(v, sec, ctx);
     case 'allegianceweb': return webHTML(v, entry, ctx);
     case 'eventtimeline': return timelineHTML(entry, ctx);
     case 'spotify': return spotifyHTML(v);

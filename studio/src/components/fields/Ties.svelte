@@ -4,13 +4,21 @@
   let { entry, sec, others } = $props();
   const list = $derived(entry.data[sec.key]);
 
-  const KINDS = ['ally', 'enemy', 'rival', 'wary', 'kin', 'patron', 'subject', 'other'];
-  const COLOR = { ally: '#5aa06f', enemy: '#c05348', rival: '#b9853a', wary: '#b9853a', kin: '#5f8fb0', patron: '#5f8fb0', subject: '#9aa1a8', other: '#9aa1a8' };
+  // default relationship kinds; a section can override with sec.kinds = [{v,l,c}]
+  const DEFAULT_KINDS = [
+    { v: 'ally', c: '#5aa06f' }, { v: 'enemy', c: '#c05348' }, { v: 'rival', c: '#b9853a' }, { v: 'wary', c: '#b9853a' },
+    { v: 'kin', c: '#5f8fb0' }, { v: 'patron', c: '#5f8fb0' }, { v: 'subject', c: '#9aa1a8' }, { v: 'other', c: '#9aa1a8' },
+  ];
+  const KINDDEFS = $derived(Array.isArray(sec.kinds) && sec.kinds.length ? sec.kinds : DEFAULT_KINDS);
+  const KINDS = $derived(KINDDEFS.map(k => k.v));
+  const COLOR = $derived(Object.fromEntries(KINDDEFS.map(k => [k.v, k.c])));
+  const namePh = $derived(sec.namePh || 'Group / people');
+  const notePh = $derived(sec.notePh || 'how they stand — a note');
   const linkTypes = sec.linkTypes || null;
   const primary = $derived(linkTypes ? (others || []).filter(o => linkTypes.includes(o.type)) : (others || []));
   const secondary = $derived(linkTypes ? (others || []).filter(o => !linkTypes.includes(o.type)) : []);
 
-  function add(){ list.push({ name: '', targetId: '', kind: 'ally', note: '' }); markDirty(); }
+  function add(){ list.push({ name: '', targetId: '', kind: KINDS[0], note: '' }); markDirty(); }
   async function del(i){
     const r = list[i]; const has = (r.name && r.name.trim()) || (r.note && r.note.trim()) || r.targetId;
     if (!(await confirmDelete(has, r.name ? '“' + r.name + '”' : 'this tie'))) return;
@@ -23,13 +31,13 @@
   {#each list as r, i (i)}
     <div class="tie" style={`--tc:${COLOR[r.kind] || COLOR.other}`}>
       <div class="ttop">
-        <input class="tnm" bind:value={r.name} oninput={markDirty} placeholder="Group / people" />
+        <input class="tnm" bind:value={r.name} oninput={markDirty} placeholder={namePh} />
         <select class="tkind" bind:value={r.kind} onchange={markDirty} title="relationship">{#each KINDS as k}<option value={k}>{k}</option>{/each}</select>
         {#if r.targetId}<button class="tmini" onclick={() => openEntry(r.targetId)} title="open">↗</button>{/if}
         <Reorder {list} {i} />
         <button class="tmini del" onclick={() => del(i)} title="remove" aria-label="remove tie">✕</button>
       </div>
-      <input class="tnote" bind:value={r.note} oninput={markDirty} placeholder="how they stand — a note" />
+      <input class="tnote" bind:value={r.note} oninput={markDirty} placeholder={notePh} />
       <select class="tlink" value={r.targetId || ''} onchange={(e) => link(i, e.target.value)} title="link the group's entry (optional)">
         <option value="">— link a group (optional) —</option>
         {#if linkTypes}
