@@ -1,0 +1,20 @@
+version: 1
+applications:
+  # The Vite/Svelte app lives in the studio/ subdirectory; appRoot runs every
+  # phase inside it, so baseDirectory (dist) resolves to studio/dist.
+  - appRoot: studio
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
