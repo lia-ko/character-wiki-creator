@@ -217,7 +217,9 @@ export function moveSectionTo(entry, fromKey, toKey){
 
 /* ---- navigation ---- */
 // content width (workspace-wide): scales the layout max-widths so wide screens aren't dead space
-export const CW_FACTOR = { normal: 1, wide: 1.45, full: 100 };
+// three widths that stay distinct even on a laptop: a narrower reading column,
+// the default, and full-viewport. (Old 'wide' overshot small screens → looked like 'full'.)
+export const CW_FACTOR = { focused: 0.82, normal: 1, full: 100 };
 export function setContentWidth(w){ app.ws.contentWidth = w; markDirty(); }
 // entries in a stable nav order (built-in type order, then the project's custom types)
 export function orderedEntries(p){

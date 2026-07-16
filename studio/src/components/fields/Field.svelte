@@ -1,3 +1,7 @@
+<script module>
+  const warned = new Set();   // field types already dev-warned about, so the guard fires once each
+</script>
+
 <script>
   import { markDirty } from '../../lib/store.svelte.js';
   import RichEditor from './RichEditor.svelte';
@@ -41,93 +45,53 @@
   import AbilityScores from './AbilityScores.svelte';
   import RollTable from './RollTable.svelte';
   import Checklist from './Checklist.svelte';
+  import Clocks from './Clocks.svelte';
+  import NpcRoster from './NpcRoster.svelte';
+
+  // Edit-widget registry: field type → its editor component. Every widget here takes the
+  // uniform ({entry, sec, others}) prop shape (components ignore props they don't declare),
+  // so adding a field type's editor = one import + one line below. The few widgets that need
+  // a different prop shape (richline, gallery, spotify) are handled as explicit cases in the
+  // markup instead of going through this map.
+  const COMPONENTS = {
+    stats: Stats, richsections: RichSections, relations: Relations, catalog: Catalog,
+    meter: Meter, kind: Kind, gauges: Gauges, arc: Arc, rulelist: Rulelist, dyad: Dyad,
+    suspects: Suspects, clues: Clues, crew: Crew, dialectic: Dialectic, table: Table,
+    embed: Embed, matrix: Matrix, statchart: Statchart, orgchart: Orgchart, ledger: Ledger,
+    references: References, sourcenotes: SourceNotes, deflist: DefList, lexicon: Lexicon,
+    chronology: Chronology, taggroups: TagGroups, excerpts: Excerpts, outline: Outline,
+    lineage: Lineage, familytree: FamilyTree, history: History, ties: Ties,
+    allegianceweb: AllegianceWeb, eventtimeline: EventTimeline, timeline: Timeline,
+    abilityscores: AbilityScores, rolltable: RollTable, checklist: Checklist,
+    clocks: Clocks, npcroster: NpcRoster,
+  };
+
+  const SPECIAL = ['richline', 'gallery', 'spotify'];   // handled explicitly below, not via the map
 
   let { entry, sec, others } = $props();
   function setRichline(v){ entry.data[sec.key] = v; markDirty(); }
+  const Cmp = $derived(COMPONENTS[sec.type] || null);
+
+  // Dev-only drift guard: a field type that renders here with no editor (and isn't a SPECIAL
+  // case) means this map fell out of sync — e.g. a type was wired into render.js/emptyValue but
+  // its editor was never added. Warn once per type so the omission is loud instead of a blank field.
+  $effect(() => {
+    if (import.meta.env.DEV && !Cmp && !SPECIAL.includes(sec.type) && !warned.has(sec.type)){
+      warned.add(sec.type);
+      console.warn(`[Field] no editor component registered for field type "${sec.type}"`);
+    }
+  });
 </script>
 
+<!-- special prop shapes: richline (lead wrapper), gallery (variant/aspect), spotify (items) -->
 {#if sec.type === 'richline'}
   <div class="lead"><RichEditor value={entry.data[sec.key]} multiline placeholder={sec.label + '… (⌘B / ⌘I)'} oninput={setRichline} /></div>
-{:else if sec.type === 'stats'}
-  <Stats {entry} {sec} />
 {:else if sec.type === 'gallery'}
   <Gallery {entry} {sec} variant="feature" aspect="16/10" />
-{:else if sec.type === 'richsections'}
-  <RichSections {entry} {sec} />
-{:else if sec.type === 'relations'}
-  <Relations {entry} {sec} {others} />
-{:else if sec.type === 'catalog'}
-  <Catalog {entry} {sec} {others} />
-{:else if sec.type === 'meter'}
-  <Meter {entry} {sec} />
-{:else if sec.type === 'kind'}
-  <Kind {entry} {sec} />
-{:else if sec.type === 'gauges'}
-  <Gauges {entry} {sec} />
-{:else if sec.type === 'arc'}
-  <Arc {entry} {sec} />
-{:else if sec.type === 'rulelist'}
-  <Rulelist {entry} {sec} />
-{:else if sec.type === 'dyad'}
-  <Dyad {entry} {sec} {others} />
-{:else if sec.type === 'suspects'}
-  <Suspects {entry} {sec} {others} />
-{:else if sec.type === 'clues'}
-  <Clues {entry} {sec} {others} />
-{:else if sec.type === 'crew'}
-  <Crew {entry} {sec} {others} />
-{:else if sec.type === 'dialectic'}
-  <Dialectic {entry} {sec} />
-{:else if sec.type === 'table'}
-  <Table {entry} {sec} />
-{:else if sec.type === 'embed'}
-  <Embed {entry} {sec} />
-{:else if sec.type === 'matrix'}
-  <Matrix {entry} {sec} {others} />
-{:else if sec.type === 'statchart'}
-  <Statchart {entry} {sec} />
-{:else if sec.type === 'orgchart'}
-  <Orgchart {entry} {sec} {others} />
-{:else if sec.type === 'ledger'}
-  <Ledger {entry} {sec} />
-{:else if sec.type === 'references'}
-  <References {entry} {sec} />
-{:else if sec.type === 'sourcenotes'}
-  <SourceNotes {entry} {sec} />
-{:else if sec.type === 'deflist'}
-  <DefList {entry} {sec} />
-{:else if sec.type === 'lexicon'}
-  <Lexicon {entry} {sec} />
-{:else if sec.type === 'chronology'}
-  <Chronology {entry} {sec} {others} />
-{:else if sec.type === 'taggroups'}
-  <TagGroups {entry} {sec} />
-{:else if sec.type === 'excerpts'}
-  <Excerpts {entry} {sec} />
-{:else if sec.type === 'outline'}
-  <Outline {entry} {sec} {others} />
-{:else if sec.type === 'lineage'}
-  <Lineage {entry} {sec} {others} />
-{:else if sec.type === 'familytree'}
-  <FamilyTree {entry} {sec} {others} />
-{:else if sec.type === 'history'}
-  <History {entry} {sec} />
-{:else if sec.type === 'ties'}
-  <Ties {entry} {sec} {others} />
-{:else if sec.type === 'allegianceweb'}
-  <AllegianceWeb {entry} {sec} {others} />
-{:else if sec.type === 'eventtimeline'}
-  <EventTimeline {entry} {sec} />
-{:else if sec.type === 'timeline'}
-  <Timeline {entry} {sec} {others} />
 {:else if sec.type === 'spotify'}
   <Spotify items={entry.data[sec.key]} />
-{:else if sec.type === 'abilityscores'}
-  <AbilityScores {entry} {sec} />
-{:else if sec.type === 'rolltable'}
-  <RollTable {entry} {sec} />
-{:else if sec.type === 'checklist'}
-  <Checklist {entry} {sec} />
+{:else if Cmp}
+  <Cmp {entry} {sec} {others} />
 {/if}
 
 <style>

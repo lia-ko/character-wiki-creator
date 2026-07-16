@@ -54,9 +54,9 @@
   </span>
   <span class="grow"></span>
   <span class="wctl wideact" role="group" aria-label="content width" title="content width">
-    <button class:on={(app.ws.contentWidth || 'normal') === 'normal'} onclick={() => setContentWidth('normal')} title="narrow" aria-label="narrow content"><svg width="18" height="10"><rect x="5" y="3" width="8" height="4" rx="1" fill="currentColor"/></svg></button>
-    <button class:on={app.ws.contentWidth === 'wide'} onclick={() => setContentWidth('wide')} title="wide" aria-label="wide content"><svg width="18" height="10"><rect x="2" y="3" width="14" height="4" rx="1" fill="currentColor"/></svg></button>
-    <button class:on={app.ws.contentWidth === 'full'} onclick={() => setContentWidth('full')} title="full width" aria-label="full-width content"><svg width="18" height="10"><rect x="0" y="3" width="18" height="4" rx="1" fill="currentColor"/></svg></button>
+    <button class:on={app.ws.contentWidth === 'focused'} onclick={() => setContentWidth('focused')} title="Focused — a narrow reading column" aria-label="focused width"><svg width="18" height="10"><rect x="5" y="3" width="8" height="4" rx="1" fill="currentColor"/></svg></button>
+    <button class:on={(app.ws.contentWidth || 'normal') === 'normal'} onclick={() => setContentWidth('normal')} title="Default width" aria-label="default width"><svg width="18" height="10"><rect x="2" y="3" width="14" height="4" rx="1" fill="currentColor"/></svg></button>
+    <button class:on={app.ws.contentWidth === 'full'} onclick={() => setContentWidth('full')} title="Full width" aria-label="full-width content"><svg width="18" height="10"><rect x="0" y="3" width="18" height="4" rx="1" fill="currentColor"/></svg></button>
   </span>
   <button class="search" onclick={openSearch} title="Search (⌘K)"><span class="si">⌕</span><span class="slabel"> Search </span><kbd>⌘K</kbd></button>
   {#if app.dirty}<span class="unsaved"><span class="u"></span> unsaved</span>{/if}

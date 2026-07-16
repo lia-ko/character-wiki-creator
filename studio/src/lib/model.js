@@ -8,7 +8,8 @@ import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES, rebuildCustomTypes 
 export function migrateWorkspace(ws){
   if (!Array.isArray(ws.trash)) ws.trash = [];
   if (!Array.isArray(ws.typeLibrary)) ws.typeLibrary = [];   // the user's custom-type library
-  if (!ws.contentWidth) ws.contentWidth = 'normal';          // content width: normal | wide | full
+  // content width: focused | normal | full (migrate the retired 'wide' → 'normal')
+  if (!ws.contentWidth || !['focused', 'normal', 'full'].includes(ws.contentWidth)) ws.contentWidth = 'normal';
   (ws?.projects || []).forEach(p => {
     if (p.portraitScale == null) p.portraitScale = 1;
     if (p.cover == null) p.cover = '';

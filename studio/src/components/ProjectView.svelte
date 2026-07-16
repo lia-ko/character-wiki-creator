@@ -11,6 +11,9 @@
   import NewEntryMenu from './NewEntryMenu.svelte';
   import SelectBar from './SelectBar.svelte';
 
+  // common first-entry starters shown on the empty-project welcome
+  const QUICKSTART = ['character', 'location', 'organization', 'event', 'timeline'];
+
   const fallbackCover = $derived.by(() => { for (const e of (p.entries || [])){ const c = coverOf(e); if (c) return c; } return ''; });
   async function setCover(){ const u = await pickImages(false); if (u && u[0]){ p.cover = u[0]; markDirty(); } }
   function clearCover(){ p.cover = ''; markDirty(); }
@@ -195,13 +198,21 @@
   {/each}
 
   {#if !shownTypes.length}
-    <div class="emptyall">
-      {#if (p.entries || []).length}
-        No {activeLabel} to show. Try another category, or add one with <b>＋ New entry</b>.
-      {:else}
-        Nothing here yet — create your first entry with <b>＋ New entry</b> above.
-      {/if}
-    </div>
+    {#if (p.entries || []).length}
+      <div class="emptyall">No {activeLabel} to show. Try another category, or add one with <b>＋ New entry</b>.</div>
+    {:else}
+      <div class="estart">
+        <div class="eic">{templateFor(p.entries?.[0]?.type || 'character').icon}</div>
+        <h3>Start building {p.name || 'your world'}</h3>
+        <p>Create your first entry — pick a common starter, or use <b>＋ New entry</b> above for the full catalog (and your own sheet types).</p>
+        <div class="equick">
+          {#each QUICKSTART as t}
+            {@const tpl = templateFor(t)}
+            <button onclick={() => addEntry(t)}><span class="qic">{tpl.icon}</span>{tpl.label}</button>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -282,4 +293,13 @@
   .kebab:hover{background:var(--accent)}
   .emptyall{color:var(--faint);font-style:italic;font-size:.9rem;text-align:center;padding:48px 20px}
   .emptyall b{color:var(--muted);font-style:normal}
+  .estart{max-width:520px;margin:40px auto;text-align:center;border:1px solid var(--rule);border-radius:16px;background:var(--panel);padding:36px 28px}
+  .estart .eic{font-family:var(--head);font-size:2.4rem;color:var(--accent-soft);line-height:1;margin-bottom:10px}
+  .estart h3{font-family:var(--head);font-size:1.4rem;color:var(--ink);margin:0 0 8px}
+  .estart p{color:var(--muted);font-size:.92rem;line-height:1.55;margin:0 auto 20px;max-width:40ch}
+  .estart p b{color:var(--ink);font-weight:600}
+  .equick{display:flex;flex-wrap:wrap;gap:9px;justify-content:center}
+  .equick button{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:.85rem;background:var(--panel-2);border:1px solid var(--rule);border-radius:9px;padding:8px 14px;cursor:pointer;color:var(--ink)}
+  .equick button:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel-2))}
+  .equick .qic{color:var(--accent-soft)}
 </style>

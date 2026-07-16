@@ -21,15 +21,15 @@ export const TEMPLATES = {
     sections: [
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
       { key: 'gallery', label: 'Portraits', type: 'gallery', slot: 'aside' },
-      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Age','Height','Pronouns','Origin','Role','Status','Languages'] },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Age','Pronouns','Role','Status'] },
       { key: 'bio', label: 'Biography', type: 'richsections', slot: 'main' },
       { key: 'arc', label: 'Arc & interiority', type: 'arc', slot: 'main', optional: true },
-      { key: 'relationships', label: 'Relationships', type: 'relations', slot: 'main' },
-      { key: 'homes', label: 'Home & haunts', type: 'relations', slot: 'main', display: 'expand' },
-      { key: 'skills', label: 'Abilities & skills', type: 'taggroups', slot: 'main' },
-      { key: 'tropes', label: 'Tropes', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Excerpts', type: 'excerpts', slot: 'main' },
-      { key: 'soundtrack', label: 'Soundtrack', type: 'spotify', slot: 'main' },
+      { key: 'relationships', label: 'Relationships', type: 'relations', slot: 'main', optional: true },
+      { key: 'homes', label: 'Home & haunts', type: 'relations', slot: 'main', display: 'expand', optional: true },
+      { key: 'skills', label: 'Abilities & skills', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'tropes', label: 'Tropes', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Excerpts', type: 'excerpts', slot: 'main', optional: true },
+      { key: 'soundtrack', label: 'Soundtrack', type: 'spotify', slot: 'main', optional: true },
     ],
   },
   location: {
@@ -44,7 +44,7 @@ export const TEMPLATES = {
       { key: 'gauges', label: 'At a glance', type: 'gauges', slot: 'aside', optional: true },
       /* article */
       { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
-      { key: 'features', label: 'Features', type: 'taggroups', slot: 'main' },
+      { key: 'features', label: 'Features', type: 'taggroups', slot: 'main', optional: true },
       { key: 'notable', label: 'Notable figures & sites', type: 'relations', slot: 'main', display: 'expand' },
       { key: 'businesses', label: 'Shops & businesses', type: 'relations', slot: 'main', display: 'expand', optional: true },
       { key: 'hidden', label: 'The hidden', type: 'richsections', slot: 'main', optional: true },
@@ -61,8 +61,8 @@ export const TEMPLATES = {
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Kind','Owner','Located in','Occupants','Built','Status'] },
       { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
       { key: 'occupants', label: 'Occupants & staff', type: 'relations', slot: 'main', display: 'expand' },
-      { key: 'features', label: 'Rooms & features', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'features', label: 'Rooms & features', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   business: {
@@ -74,9 +74,9 @@ export const TEMPLATES = {
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Proprietor','Located in','Founded','Specialty','Status'] },
       { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
       { key: 'staff', label: 'Proprietor & staff', type: 'relations', slot: 'main' },
-      { key: 'wares', label: 'Wares & services', type: 'taggroups', slot: 'main' },
-      { key: 'patrons', label: 'Patrons & ties', type: 'relations', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'wares', label: 'Wares & services', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'patrons', label: 'Patrons & ties', type: 'relations', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   house: {
@@ -87,11 +87,11 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Sigil & imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Seat','Head','Founded','Region','Allegiance','Status'] },
       { key: 'history', label: 'History', type: 'richsections', slot: 'main' },
-      { key: 'lineage', label: 'Lineage', type: 'familytree', slot: 'main' },
-      { key: 'allegiances', label: 'Allegiances & ties', type: 'allegianceweb', slot: 'main' },
+      { key: 'lineage', label: 'Lineage', type: 'familytree', slot: 'main', optional: true },
+      { key: 'allegiances', label: 'Allegiances & ties', type: 'allegianceweb', slot: 'main', optional: true },
       { key: 'holdings', label: 'Seats & holdings', type: 'relations', slot: 'main' },
-      { key: 'tenets', label: 'Words & traditions', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'tenets', label: 'Words & traditions', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   organization: {
@@ -100,13 +100,13 @@ export const TEMPLATES = {
     sections: [
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
       { key: 'gallery', label: 'Emblem & imagery', type: 'gallery', slot: 'aside' },
-      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Founded','Seat','Leader','Size','Allegiance','Status'] },
+      { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Leader','Seat','Allegiance','Status'] },
       { key: 'history', label: 'History', type: 'richsections', slot: 'main' },
-      { key: 'base', label: 'Base of operations', type: 'relations', slot: 'main', display: 'expand' },
+      { key: 'base', label: 'Base of operations', type: 'relations', slot: 'main', display: 'expand', optional: true },
       { key: 'members', label: 'Members & ranks', type: 'relations', slot: 'main' },
-      { key: 'ties', label: 'Allies & rivals', type: 'relations', slot: 'main' },
-      { key: 'tenets', label: 'Tenets & traits', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'ties', label: 'Allies & rivals', type: 'relations', slot: 'main', optional: true },
+      { key: 'tenets', label: 'Tenets & traits', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   /* ---- a distinct kind of people / beings — flexible across biological species
@@ -237,15 +237,15 @@ export const TEMPLATES = {
     ],
   },
   lore: {
-    type: 'lore', label: 'Lore', plural: 'Lore', icon: '❋', layout: 'infobox',
+    type: 'lore', label: 'Lore', plural: 'Lore', icon: '❋', layout: 'codex',
     title: { ph: 'Concept / topic' }, subtitle: { ph: 'category (optional)' },
     sections: [
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
       { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Category','Origin','Status'] },
       { key: 'body', label: 'Overview', type: 'richsections', slot: 'main' },
-      { key: 'related', label: 'Connections', type: 'relations', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'related', label: 'Connections', type: 'relations', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   item: {
@@ -256,8 +256,8 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Origin','Owner','Status'] },
       { key: 'body', label: 'Description', type: 'richsections', slot: 'main' },
-      { key: 'related', label: 'Bearers & links', type: 'relations', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'related', label: 'Bearers & links', type: 'relations', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   event: {
@@ -267,10 +267,10 @@ export const TEMPLATES = {
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
       { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Date','Where','Duration','Outcome'] },
-      { key: 'timeline', label: 'Timeline', type: 'eventtimeline', slot: 'main' },
+      { key: 'timeline', label: 'Timeline', type: 'eventtimeline', slot: 'main', optional: true },
       { key: 'body', label: 'Account', type: 'richsections', slot: 'main' },
-      { key: 'participants', label: 'Participants', type: 'relations', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'participants', label: 'Participants', type: 'relations', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   plot: {
@@ -313,8 +313,8 @@ export const TEMPLATES = {
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','Biome','Climate','Growing season','Notable species','Status'] },
       { key: 'overview', label: 'Botany & overview', type: 'richsections', slot: 'main' },
       { key: 'catalog', label: 'Plants & fungi', type: 'catalog', slot: 'main', scale: 'Rarity' },
-      { key: 'byuse', label: 'By use', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Field notes', type: 'excerpts', slot: 'main' },
+      { key: 'byuse', label: 'By use', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Field notes', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   fauna: {
@@ -327,8 +327,8 @@ export const TEMPLATES = {
       { key: 'scale', label: 'Threat level', type: 'meter', slot: 'main', levels: ['Low','Moderate','High','Extreme'] },
       { key: 'overview', label: 'Ecology & overview', type: 'richsections', slot: 'main' },
       { key: 'catalog', label: 'Creatures', type: 'catalog', slot: 'main', scale: 'Rarity' },
-      { key: 'byhabitat', label: 'By habitat', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Field notes', type: 'excerpts', slot: 'main' },
+      { key: 'byhabitat', label: 'By habitat', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Field notes', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   religion: {
@@ -341,8 +341,8 @@ export const TEMPLATES = {
       { key: 'scale', label: 'Tolerance', type: 'meter', slot: 'main', levels: ['Persecuted','Uneasy','Broad','Open'] },
       { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
       { key: 'catalog', label: 'Faiths & cults', type: 'catalog', slot: 'main', scale: 'Standing' },
-      { key: 'deities', label: 'Deities & powers', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'deities', label: 'Deities & powers', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   beliefs: {
@@ -355,8 +355,8 @@ export const TEMPLATES = {
       { key: 'scale', label: 'How strictly kept', type: 'meter', slot: 'main', levels: ['Loose','Held','Strict','Absolute'] },
       { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
       { key: 'catalog', label: 'Customs & beliefs', type: 'catalog', slot: 'main', scale: 'Observance' },
-      { key: 'values', label: 'Values & taboos', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Sayings', type: 'excerpts', slot: 'main' },
+      { key: 'values', label: 'Values & taboos', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Sayings', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   folklore: {
@@ -369,8 +369,8 @@ export const TEMPLATES = {
       { key: 'scale', label: 'How widely told', type: 'meter', slot: 'main', levels: ['Local','Regional','Widespread','Ubiquitous'] },
       { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
       { key: 'catalog', label: 'Tales & legends', type: 'catalog', slot: 'main', scale: 'Currency' },
-      { key: 'motifs', label: 'Motifs & themes', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Tellings', type: 'excerpts', slot: 'main' },
+      { key: 'motifs', label: 'Motifs & themes', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Tellings', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
   language: {
@@ -383,8 +383,8 @@ export const TEMPLATES = {
       { key: 'scale', label: 'How widely spoken', type: 'meter', slot: 'main', levels: ['Local','Regional','Common','Lingua franca'] },
       { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
       { key: 'catalog', label: 'Tongues & dialects', type: 'catalog', slot: 'main', scale: 'Vitality' },
-      { key: 'features', label: 'Features & sample', type: 'taggroups', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'features', label: 'Features & sample', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
 
@@ -566,8 +566,8 @@ export const TEMPLATES = {
       { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Type','Origin','Range','Rarity','Status'] },
       { key: 'description', label: 'Description', type: 'richsections', slot: 'main' },
-      { key: 'connections', label: 'Connections', type: 'relations', slot: 'main' },
-      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
+      { key: 'connections', label: 'Connections', type: 'relations', slot: 'main', optional: true },
+      { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
   },
 
@@ -684,10 +684,63 @@ export const TEMPLATES = {
       { key: 'notes', label: 'GM notes', type: 'richsections', slot: 'main', optional: true },
     ],
   },
+
+  /* ---- GM / DM faction / front: a *living* antagonist group — its agenda, goals as progress
+     clocks, assets, moves, key members and stance toward the party. (Distinct from the
+     structural `organization` sheet: this is what they're DOING and how close to winning.) ---- */
+  front: {
+    type: 'front', label: 'Faction / Front', plural: 'Factions & Fronts', icon: '❂', layout: 'codex',
+    title: { ph: 'Faction / Front name — e.g. The Ashen Hand' }, subtitle: { ph: 'type / scope (optional)' },
+    sections: [
+      { key: 'gallery', label: 'Sigil & imagery', type: 'gallery', slot: 'aside', optional: true },
+      { key: 'vitals', label: 'At a glance', type: 'stats', slot: 'aside', defaults: ['Type', 'Scale', 'Reach', 'Stance to party', 'Status'] },
+      { key: 'summary', label: 'Agenda', type: 'richline', slot: 'main', lead: true },
+      { key: 'clocks', label: 'Goals & clocks', type: 'clocks', slot: 'main' },
+      { key: 'assets', label: 'Assets & resources', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'moves', label: 'Moves & tactics', type: 'rulelist', slot: 'main', variant: 'laws', optional: true },
+      { key: 'roster', label: 'Key members', type: 'crew', slot: 'main', optional: true },
+      { key: 'ties', label: 'Relationships', type: 'ties', slot: 'main', optional: true },
+      { key: 'notes', label: 'Notes & secrets', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- GM / DM campaign overview: the home-base page for a chronicle — premise, tone &
+     themes, safety tools (lines & veils), house rules, the central threat, principal cast and
+     open threads. Mostly table / meta content. ---- */
+  campaign: {
+    type: 'campaign', label: 'Campaign', plural: 'Campaign', icon: '✤', layout: 'codex',
+    title: { ph: 'Campaign name' }, subtitle: { ph: 'system / setting (optional)' },
+    sections: [
+      { key: 'gallery', label: 'Key art', type: 'gallery', slot: 'aside', optional: true },
+      { key: 'vitals', label: 'At a glance', type: 'stats', slot: 'aside', defaults: ['System', 'Setting', 'Tone', 'Status', 'Sessions', 'Started'] },
+      { key: 'premise', label: 'Premise', type: 'richline', slot: 'main', lead: true },
+      { key: 'pitch', label: 'The pitch', type: 'richsections', slot: 'main' },
+      { key: 'themes', label: 'Themes & tone', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'safety', label: 'Safety tools', type: 'dialectic', slot: 'main', leftLabel: 'Lines — never on-screen', rightLabel: 'Veils — kept off-screen', optional: true },
+      { key: 'houserules', label: 'House rules', type: 'rulelist', slot: 'main', variant: 'laws', optional: true },
+      { key: 'threat', label: 'The central threat', type: 'relations', slot: 'main', display: 'expand', optional: true },
+      { key: 'cast', label: 'Principal cast & factions', type: 'relations', slot: 'main', display: 'expand', optional: true },
+      { key: 'threads', label: 'Open threads', type: 'checklist', slot: 'main', addLabel: 'thread', optional: true },
+      { key: 'notes', label: 'GM notes', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- GM / DM cast / NPC roster: one page holding many lightweight NPCs (the bartender, the
+     guard, the fence) — name, role, disposition, want, quirk, GM-secret, optional portrait and
+     a link to a full sheet if one gets promoted. Add more roster sections to group by place. ---- */
+  cast: {
+    type: 'cast', label: 'NPC Roster', plural: 'NPC Rosters', icon: '◫', layout: 'hero', media: 'none',
+    title: { ph: 'Roster name — e.g. Ashport NPCs' }, subtitle: { ph: 'location / group (optional)' },
+    sections: [
+      { key: 'summary', label: 'About', type: 'richline', slot: 'main', lead: true },
+      { key: 'roster', label: 'NPCs', type: 'npcroster', slot: 'main' },
+      { key: 'notes', label: 'Notes', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
 };
 
 // Display order for the type picker / project view.
-export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','setting','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','operation','theme','lore','item','system','power','entity','research','source','article','statblock','encounter','storyteller','rolltable','quest','session'];
+export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','setting','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','operation','theme','lore','item','system','power','entity','research','source','article','campaign','statblock','encounter','storyteller','front','cast','rolltable','quest','session'];
 
 // Type families — group the entry types for the project-view category filter + the
 // "New entry" picker. Source of truth for section order too (people → places → nature → culture → story → lore).
@@ -698,7 +751,7 @@ export const FAMILIES = [
   { key: 'culture', label: 'Culture', types: ['religion','beliefs','folklore','language'] },
   { key: 'story',   label: 'Story',   types: ['event','plot','timeline','case','clue','operation','theme'] },
   { key: 'lore',    label: 'Lore',    types: ['lore','item','system','power','entity','research','source','article'] },
-  { key: 'game',    label: 'Game',    types: ['statblock','encounter','storyteller','rolltable','quest','session'] },
+  { key: 'game',    label: 'Game',    types: ['campaign','statblock','encounter','storyteller','front','cast','rolltable','quest','session'] },
 ];
 
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
@@ -768,6 +821,8 @@ export function emptyValue(section){
     case 'spotify': return [];
     case 'rolltable': return { die: 20, rows: [{ range: '', text: '' }] };
     case 'checklist': return [];
+    case 'clocks': return [];
+    case 'npcroster': return [];
     case 'abilityscores': {
       const mode = section.mod || 'value';
       const labels = (section.abils && section.abils.length) ? section.abils : ['Stat 1', 'Stat 2', 'Stat 3'];

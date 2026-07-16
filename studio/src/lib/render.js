@@ -1,6 +1,6 @@
 /* ============ STATIC READER RENDERER ============
    Pure functions: entry + template + context -> self-contained reader HTML.
-   Mirrors the editor layouts (split / hero / infobox / outline) read-only.
+   Mirrors the editor layouts (split / hero / codex / outline) read-only.
    Powers both the in-app Preview and the .zip exporter. No Svelte, no editing. */
 
 import { esc, richToParas, richToLine } from './richtext.js';
@@ -703,8 +703,43 @@ function fieldHTML(entry, sec, ctx){
     case 'abilityscores': return abilityScoresHTML(v);
     case 'rolltable': return rolltableHTML(v);
     case 'checklist': return checklistHTML(v);
+    case 'clocks': return clocksHTML(v);
+    case 'npcroster': return npcRosterHTML(v, ctx);
     default: return '';
   }
+}
+
+// NPC roster — quick minor-NPC cards. The `secret` field is GM-only and is NOT exported.
+function npcRosterHTML(list, ctx){
+  if (!Array.isArray(list)) return '';
+  const cards = list.filter(r => (r.name || '').trim() || r.targetId).map(r => {
+    const nm = r.name || (r.targetId && ctx.title && ctx.title(r.targetId)) || 'NPC';
+    const href = r.targetId && ctx.href && ctx.href(r.targetId);
+    const cover = (r.targetId && ctx.cover && ctx.cover(r.targetId)) || r.img || '';
+    const port = cover ? `<span class="nport" style="background-image:url(${esc(cover)})"></span>` : `<span class="nport empty">${esc((nm || '?').slice(0, 1))}</span>`;
+    const name = href ? `<a href="${esc(href)}">${esc(nm)}</a>` : esc(nm);
+    const row = (k, v) => v && v.trim() ? `<div class="nrow"><span class="nk">${k}</span><span class="nv">${esc(v)}</span></div>` : '';
+    const rows = row('wants', r.want) + row('quirk', r.quirk) + row('where', r.where);
+    const disp = r.disp ? `<span class="ndisp ${esc(r.disp)}">${esc(r.disp)}</span>` : '';
+    return `<div class="npc" data-disp="${esc(r.disp || '')}">${port}<div class="nmain"><div class="ntop"><span class="nnm">${name}</span>${r.role ? `<span class="nrole">${esc(r.role)}</span>` : ''}${disp}</div>${rows ? `<div class="nrows">${rows}</div>` : ''}</div></div>`;
+  }).join('');
+  return cards ? `<div class="roster">${cards}</div>` : '';
+}
+
+function clocksHTML(v){
+  if (!Array.isArray(v) || !v.length) return '';
+  const wedge = (i, n) => {
+    const cx = 24, cy = 24, r = 22;
+    const a0 = (-90 + i * 360 / n) * Math.PI / 180, a1 = (-90 + (i + 1) * 360 / n) * Math.PI / 180;
+    const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0), x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const large = (360 / n) > 180 ? 1 : 0;
+    return `M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z`;
+  };
+  const clocks = v.filter(c => c && c.segments).map(c => {
+    const segs = Array.from({ length: c.segments }, (_, s) => `<path class="seg${s < (c.filled || 0) ? ' fill' : ''}" d="${wedge(s, c.segments)}"/>`).join('');
+    return `<div class="clk"><svg class="clkface" viewBox="0 0 48 48">${segs}<circle class="clkring" cx="24" cy="24" r="22"/></svg><div class="clklbl">${esc(c.label || '')}</div><div class="clkctl">${c.filled || 0}/${c.segments}</div></div>`;
+  }).join('');
+  return `<div class="clocks">${clocks}</div>`;
 }
 
 function checklistHTML(v){
@@ -809,11 +844,20 @@ function backlinksHTML(backlinks, ctx){
 
 export function renderEntry(entry, ctx){
   const tpl = templateFor(entry.type);
-  // media-toggle templates pick their format per entry: Side → character `split`, Top → location `hero`.
-  let layout = tpl.layout || 'infobox';
-  if (tpl.mediaToggle) layout = (entry.mediaPos || 'side') === 'side' ? 'split' : 'hero';
   const gallerySec = tpl.sections.find(s => s.type === 'gallery');
   const statsSec = tpl.sections.find(s => s.type === 'stats');
+  // Universal per-entry image placement: any gallery sheet (except outline/plot) can move its
+  // image between a top banner, a side column, or the details rail — the position selects the
+  // rendering format (side→split, top→hero, rail→codex/infobox), defaulting to the layout's
+  // native slot. Mirrors the editor's placement logic so export matches the edit view.
+  const NATIVE_POS = { split: 'side', hero: 'top', codex: 'rail', infobox: 'rail' };
+  // 'infobox' is retired — the composable rail (codex) supersedes it everywhere
+  let layout = tpl.layout === 'infobox' ? 'codex' : (tpl.layout || 'codex');
+  if (gallerySec && layout !== 'outline'){
+    // mediaToggle sheets (Research) historically defaulted to Side — preserve that
+    const pos = entry.mediaPos || (tpl.mediaToggle ? 'side' : NATIVE_POS[tpl.layout]) || 'rail';
+    layout = pos === 'side' ? 'split' : pos === 'top' ? 'hero' : 'codex';   // 'rail' → composable rail for every sheet
+  }
   const bodySecs = bodySectionsOf(entry);
   // build the body, injecting a zone divider before the first non-empty section of each zone;
   // `band`-slot sections are collected separately to render full-width below the columns
@@ -855,14 +899,14 @@ export function renderEntry(entry, ctx){
   } else if (layout === 'split'){
     main = `<div class="wsplit"><div class="media">${gal}</div><div class="col">${title}${stats}${body}</div></div>`;
   } else if (layout === 'hero'){
-    let head;
-    if (tpl.media === 'feature') head = `${title}${gal}`;
-    else if (tpl.media === 'sigil') head = `<div class="herohead">${gal ? `<div class="sig">${gal}</div>` : ''}${title}</div>`;
-    else head = title;
+    // a sheet shown as a top banner uses a feature image; sigil sheets keep emblem-beside-title
+    const head = tpl.media === 'sigil'
+      ? `<div class="herohead">${gal ? `<div class="sig">${gal}</div>` : ''}${title}</div>`
+      : `${title}${gal}`;
     main = `<div class="whero">${head}${stats}${body}</div>`;
-  } else if (layout === 'codex'){
-    // article in the main column; the aside rail renders every non-hidden aside section as a titled
-    // widget (the composable infobox), in the reader's chosen order (entry.asideOrder)
+  } else {
+    // rail / codex — article in the main column; the aside rail renders every non-hidden aside
+    // section as a titled widget (the composable sidebar), in the reader's chosen order. Also the catch-all.
     const asideList = tpl.sections.filter(s => s.slot === 'aside' && !(entry.hidden || []).includes(s.key));
     if (entry.asideOrder && entry.asideOrder.length){ const oi = k => { const i = entry.asideOrder.indexOf(k); return i === -1 ? Infinity : i; }; asideList.sort((a, b) => oi(a.key) - oi(b.key)); }
     const rail = asideList.map(sec => {
@@ -870,8 +914,6 @@ export function renderEntry(entry, ctx){
       return `<div class="railw"><div class="rwh">${esc(sec.label)}</div>${inner}</div>`;
     }).join('');
     main = `<div class="wbody"><main class="article">${title}${body}</main><aside class="infobox codexrail">${rail}</aside></div>${bandsHTML}`;
-  } else {
-    main = `<div class="wbody"><main class="article">${title}${body}</main><aside class="infobox">${gal}${stats}</aside></div>`;
   }
 
   const crumb = ctx.hubHref ? `<a href="${esc(ctx.hubHref)}">&larr; ${esc(ctx.crumb || 'Back')}</a>` : `<span>${esc(ctx.crumb || '')}</span>`;

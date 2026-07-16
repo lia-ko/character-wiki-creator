@@ -53,8 +53,10 @@
       <div class="srow">
         <input class="slabel" bind:value={s.label} oninput={markDirty} placeholder="stat" />
         <input class="sval" type="number" bind:value={s.value} oninput={markDirty} placeholder="0" />
-        <Reorder list={d.stats} {i} />
-        <button class="sx" onclick={() => del(i)} title="remove" aria-label="remove">✕</button>
+        <span class="srowctl">
+          <Reorder list={d.stats} {i} />
+          <button class="sx" onclick={() => del(i)} title="remove" aria-label="remove">✕</button>
+        </span>
       </div>
     {/each}
     <button class="addbtn" onclick={add}>＋ Add stat</button>
@@ -85,7 +87,9 @@
   .bar .bv{font-family:var(--mono);font-size:.72rem;color:var(--ink)}
   .hint{font-family:var(--sans);font-size:.74rem;color:var(--faint);margin:4px 0 0}
   .rows{display:flex;flex-direction:column;gap:6px}
-  .srow{display:grid;grid-template-columns:1fr 5em auto auto;gap:8px;align-items:center}
+  .srow{display:grid;grid-template-columns:1fr 5em auto;gap:8px;align-items:center}
+  .srowctl{display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity .12s}
+  .srow:hover .srowctl,.srow:focus-within .srowctl{opacity:1}
   .slabel,.sval{background:var(--panel-2);border:1px solid var(--rule);border-radius:6px;color:var(--ink);font:inherit;font-size:.9rem;padding:6px 9px;outline:none}
   .slabel:focus,.sval:focus{border-color:var(--accent)}
   .sx{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:6px;cursor:pointer;padding:5px 9px;font-size:.72rem}

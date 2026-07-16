@@ -33,27 +33,39 @@
   const project = $derived(curProject());
   const entry = $derived(curEntry());
   const tpl = $derived(entry ? templateFor(entry.type) : null);
-  // media-toggle templates select their layout FORMAT per entry: Side reuses the
-  // character `split` format, Top reuses the location/business `hero` (feature) format.
+  const gallerySec = $derived(tpl?.sections.find(s => s.type === 'gallery') || null);
+  const statsSec = $derived(tpl?.sections.find(s => s.type === 'stats') || null);
+
+  // ---- per-entry image placement (universal) ----
+  // Any sheet with a gallery can move its image between a Top banner, a Side column, or the
+  // details Rail — the position simply selects which rendering FORMAT to use: side→`split`,
+  // top→`hero`, rail→`codex` (composable rail) or `infobox` (simple aside). Each sheet defaults
+  // to its layout's native slot, so nothing changes until the reader picks a different position.
+  // Plot (outline) keeps its own dedicated control below.
+  const NATIVE_POS = { split: 'side', hero: 'top', codex: 'rail', infobox: 'rail' };
+  const canPlace = $derived(!!gallerySec && tpl?.layout !== 'outline');
+  // mediaToggle sheets (Research) historically defaulted to Side — preserve that so existing entries don't shift
+  const nativePos = $derived(tpl?.mediaToggle ? 'side' : (NATIVE_POS[tpl?.layout] || 'rail'));
+  const imgPos = $derived(canPlace ? (entry?.mediaPos || nativePos) : nativePos);
+  function setMediaPos(p){ if (entry){ entry.mediaPos = p; markDirty(); } }
   const layout = $derived.by(() => {
-    const base = tpl?.layout || 'infobox';
-    if (tpl?.mediaToggle) return (entry?.mediaPos || 'side') === 'side' ? 'split' : 'hero';
-    return base;
+    if (tpl?.layout === 'outline') return 'outline';
+    // 'infobox' is retired — the composable rail (codex) supersedes it everywhere
+    if (!canPlace) return tpl?.layout === 'infobox' ? 'codex' : (tpl?.layout || 'codex');
+    if (imgPos === 'side') return 'split';
+    if (imgPos === 'top') return 'hero';
+    return 'codex';   // 'rail' → the composable rail for every sheet: heading + body left, widgets right
   });
+  // a sheet shown as a Top banner uses a feature image, except sigil sheets (house/org) which
+  // keep their emblem-beside-title treatment
+  const heroMedia = $derived(tpl?.media === 'sigil' ? 'sigil' : 'feature');
+  // outline templates (plot) support a 3-way image placement: top banner / side / right rail
+  const mpos = $derived(entry?.mediaPos || 'top');
 
   const others = $derived((project?.entries || []).filter(e => e.id !== entry?.id).map(e => ({ id: e.id, title: e.title, type: e.type, cover: coverOf(e) })));
 
   // existing group labels in this project, for the group autocomplete
   const groupOptions = $derived([...new Set((project?.entries || []).map(e => (e.group || '').trim()).filter(Boolean))].sort());
-
-  // per-entry image placement (templates with mediaToggle) — defaults to the side rail
-  const mediaSide = $derived((entry?.mediaPos || 'side') === 'side');
-  function setMediaPos(p){ if (entry){ entry.mediaPos = p; markDirty(); } }
-  // outline templates (plot) support a 3-way image placement: top banner / side / right rail
-  const mpos = $derived(entry?.mediaPos || 'top');
-
-  const gallerySec = $derived(tpl?.sections.find(s => s.type === 'gallery') || null);
-  const statsSec = $derived(tpl?.sections.find(s => s.type === 'stats') || null);
   // codex layout: the rail is every non-hidden aside-slot section (the composable infobox),
   // ordered by the per-entry asideOrder so widgets can be reordered
   const asideSecs = $derived.by(() => {
@@ -171,19 +183,21 @@
     </label>
     <datalist id="entry-groups">{#each groupOptions as g}<option value={g}></option>{/each}</datalist>
     <span class="grow"></span>
-    {#if tpl.mediaToggle && gallerySec}
-      <span class="mtoggle" title="where the image sits">
-        <span class="mtl">Image</span>
-        <button class:on={!mediaSide} onclick={() => setMediaPos('top')}>Top</button>
-        <button class:on={mediaSide} onclick={() => setMediaPos('side')}>Side</button>
-      </span>
-    {/if}
     {#if tpl.mediaPlace && gallerySec}
+      <!-- plot (outline): its own top / side / rail control -->
       <span class="mtoggle" title="where the image sits">
         <span class="mtl">Image</span>
         <button class:on={mpos === 'top'} onclick={() => setMediaPos('top')}>Top</button>
         <button class:on={mpos === 'side'} onclick={() => setMediaPos('side')}>Side</button>
         <button class:on={mpos === 'rail'} onclick={() => setMediaPos('rail')}>Rail</button>
+      </span>
+    {:else if canPlace}
+      <!-- universal image placement — every gallery sheet gets top / side / rail -->
+      <span class="mtoggle" title="where the image sits">
+        <span class="mtl">Image</span>
+        <button class:on={imgPos === 'top'} onclick={() => setMediaPos('top')}>Top</button>
+        <button class:on={imgPos === 'side'} onclick={() => setMediaPos('side')}>Side</button>
+        <button class:on={imgPos === 'rail'} onclick={() => setMediaPos('rail')}>Rail</button>
       </span>
     {/if}
     {#if jumpSecs.length > 3}
@@ -263,9 +277,9 @@
               <!-- browse: category rail on the left, items on the right -->
               <div class="addpanes">
                 <div class="addcats">
-                  {#if hasSheetSecs}<button class:on={secCat === 'sheet'} onclick={() => secCat = 'sheet'}><span class="cdot sug"></span>This sheet</button>{/if}
+                  {#if hasSheetSecs}<button class:on={secCat === 'sheet'} onclick={() => secCat = 'sheet'}><span class="cico sug">✦</span>On this sheet</button>{/if}
                   {#each FEATURE_GROUPS as g}
-                    <button class:on={secCat === g.group} onclick={() => secCat = g.group}><span class="cdot" style="background:{g.color}"></span>{g.group}</button>
+                    <button class:on={secCat === g.group} onclick={() => secCat = g.group}><span class="cico" style="color:{g.color}">{g.icon}</span>{g.group}</button>
                   {/each}
                 </div>
                 <div class="addpane">
@@ -331,26 +345,23 @@
     <!-- ============ HERO (house, organization, realm, location, event) ============ -->
     {:else if layout === 'hero'}
       <div class="whero">
-        {#if tpl.media === 'feature'}
-          <EntryTitle {entry} {tpl} />
-          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect={layout === 'split' ? '3/4' : '16/10'} />{/if}
-        {:else if tpl.media === 'sigil'}
+        {#if heroMedia === 'sigil'}
           <div class="herohead">
             {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="sigil" />{/if}
             <EntryTitle {entry} {tpl} />
           </div>
         {:else}
           <EntryTitle {entry} {tpl} />
+          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect="16/10" />{/if}
         {/if}
 
         {#if statsSec}<div class="blk-h">{statsSec.label}</div><Stats {entry} sec={statsSec} />{/if}
-        {#if tpl.media === 'none' && gallerySec}<div class="blk-h">{gallerySec.label}</div><Gallery {entry} sec={gallerySec} variant="grid" />{/if}
 
         {@render bodyList()}
       </div>
 
-    <!-- ============ CODEX (species) — article + composable infobox rail ============ -->
-    {:else if layout === 'codex'}
+    <!-- ============ RAIL / CODEX — article + composable sidebar (also the catch-all) ============ -->
+    {:else}
       <div class="wbody">
         <main class="article">
           <EntryTitle {entry} {tpl} />
@@ -400,19 +411,6 @@
           {/each}
         </div>
       {/if}
-
-    <!-- ============ INFOBOX (lore) ============ -->
-    {:else}
-      <div class="wbody">
-        <main class="article">
-          {@render bodyList()}
-        </main>
-        <aside class="infobox">
-          <EntryTitle {entry} {tpl} center />
-          {#if gallerySec}<div class="ib-h">{gallerySec.label}</div><Gallery {entry} sec={gallerySec} variant="grid" />{/if}
-          {#if statsSec}<div class="ib-h">{statsSec.label}</div><Stats {entry} sec={statsSec} />{/if}
-        </aside>
-      </div>
     {/if}
 
     {#if backlinks.length}
@@ -460,11 +458,6 @@
   .mtoggle button:last-of-type{border-radius:0 7px 7px 0}
   .mtoggle button:not(:first-of-type){border-left:none}
   .mtoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .wctl{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
-  .wctl button{border:none;background:var(--panel-2);color:var(--faint);cursor:pointer;padding:5px 7px;border-right:1px solid var(--rule);display:flex;align-items:center}
-  .wctl button:last-child{border-right:none}
-  .wctl button:hover{color:var(--muted)}
-  .wctl button.on{color:#fff;background:var(--accent)}
   .expbtn{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
   .expbtn:hover{border-color:var(--accent)}
   .expbtn:disabled{opacity:.6;cursor:default}
@@ -534,12 +527,12 @@
   .addsearch::placeholder{color:var(--faint)}
   .addflat{flex:1;min-height:0;overflow:auto;padding:6px;display:flex;flex-direction:column;gap:2px}
   .addpanes{display:flex;flex:1;min-height:0}
-  .addcats{flex:none;width:136px;border-right:1px solid var(--rule);padding:6px;display:flex;flex-direction:column;gap:1px;overflow:auto}
-  .addcats button{display:flex;align-items:center;gap:8px;text-align:left;font:inherit;font-size:.77rem;color:var(--muted);background:none;border:none;border-radius:6px;padding:6px 9px;cursor:pointer;white-space:nowrap}
+  .addcats{flex:none;width:150px;border-right:1px solid var(--rule);padding:6px;display:flex;flex-direction:column;gap:1px;overflow:auto}
+  .addcats button{display:flex;align-items:center;gap:9px;text-align:left;font:inherit;font-size:.77rem;color:var(--muted);background:none;border:none;border-radius:6px;padding:6px 9px;cursor:pointer;white-space:nowrap}
   .addcats button:hover{background:var(--panel-2);color:var(--ink)}
   .addcats button.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 2px 0 var(--accent)}
-  .cdot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--faint)}
-  .cdot.sug{background:var(--ok,#4aa579)}
+  .cico{width:16px;flex:none;text-align:center;font-size:.9rem;line-height:1;color:var(--faint)}
+  .cico.sug{color:var(--ok,#4aa579)}
   .addpane{flex:1;min-width:0;overflow:auto;padding:6px;display:flex;flex-direction:column;gap:2px}
   .addnone{padding:10px 11px;color:var(--faint);font-size:.82rem}
   .addopt{display:flex;flex-direction:column;gap:1px;text-align:left;background:none;border:none;border-radius:7px;padding:8px 11px;cursor:pointer;color:var(--ink)}
@@ -565,7 +558,6 @@
   .wbody{display:grid;grid-template-columns:1fr 300px;max-width:calc(1140px * var(--cw,1));margin:0 auto;gap:34px;padding:0 26px}
   .article{padding:26px 0;min-width:0;display:flex;flex-direction:column;gap:10px}
   .infobox{padding:26px 0;display:flex;flex-direction:column;gap:10px}
-  .ib-h{font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:8px 0 -2px}
   /* codex rail widgets */
   .codexrail .railw{margin-bottom:16px}
   .codexrail .rwh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:.58rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line)}

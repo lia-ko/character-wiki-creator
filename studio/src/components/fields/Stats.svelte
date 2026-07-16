@@ -12,8 +12,10 @@
     <div class="srow">
       <input class="k" bind:value={row.k} oninput={markDirty} placeholder="label" />
       <input class="v" bind:value={row.v} oninput={markDirty} placeholder="—" />
-      <Reorder list={rows} {i} />
-      <button class="delx" onclick={() => del(i)} title="remove">✕</button>
+      <span class="rowctl">
+        <Reorder list={rows} {i} />
+        <button class="delx" onclick={() => del(i)} title="remove">✕</button>
+      </span>
     </div>
   {/each}
   <button class="addbtn sm" onclick={add}>＋ field</button>
@@ -21,7 +23,12 @@
 
 <style>
   .stats{border:1px solid var(--rule);border-radius:8px;overflow:hidden}
-  .srow{display:grid;grid-template-columns:40% 1fr auto auto;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
+  .srow{display:grid;grid-template-columns:40% 1fr auto;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
+  /* row controls (reorder + delete) stay out of sight until the row is hovered/focused, so an
+     at-rest Details block reads as clean label/value pairs rather than rows of buttons. Space is
+     reserved (opacity, not display) so revealing them never shifts the layout. */
+  .rowctl{display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity .12s}
+  .srow:hover .rowctl,.srow:focus-within .rowctl{opacity:1}
   input{background:none;border:none;outline:none;color:var(--ink);font:inherit}
   .k{font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
   .v{font-size:.82rem;color:var(--muted)}

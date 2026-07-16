@@ -73,6 +73,8 @@
   .rttext{background:none;border:none;outline:none;font-family:var(--body);font-size:.98rem;color:var(--ink);min-width:0}
   .rtrange::placeholder,.rttext::placeholder{color:var(--faint)}
   .rtacts{display:inline-flex;align-items:center;gap:4px;flex:none}
+  .rtacts{display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity .12s}
+  .rtrow:hover .rtacts,.rtrow:focus-within .rtacts{opacity:1}
   .rtdel{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:6px;cursor:pointer;padding:4px 8px;font-size:.72rem;line-height:1}
   .rtdel:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
   .addbtn{width:100%;margin-top:1px;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:8px;cursor:pointer;font-family:var(--sans);font-size:.8rem}

@@ -42,7 +42,10 @@
   .dterm::placeholder{color:var(--faint)}
   .ddef::placeholder{color:var(--faint)}
   .dnote::placeholder{color:var(--faint)}
-  .dacts{display:inline-flex;align-items:center;gap:4px;flex:none}
+  /* reorder + delete stay hidden until the row is hovered/focused, so pre-seeded rows
+     (e.g. Setting's five senses, a stat block's defenses) read cleanly at rest */
+  .dacts{display:inline-flex;align-items:center;gap:4px;flex:none;opacity:0;transition:opacity .12s}
+  .drow:hover .dacts,.drow:focus-within .dacts{opacity:1}
   .ddel{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:6px;cursor:pointer;padding:4px 8px;font-size:.72rem;line-height:1}
   .ddel:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
   .addbtn{width:100%;margin-top:2px;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px;cursor:pointer;font-family:var(--sans);font-size:.8rem}
