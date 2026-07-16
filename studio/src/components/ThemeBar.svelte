@@ -9,6 +9,14 @@
   let paletteOpen = $state(false);
   const curPal = $derived(PALETTES.find(p => p.id === target.palette) || PALETTES[0]);
   function pickPalette(id){ target.palette = id; paletteOpen = false; markDirty(); }
+
+  // group palettes by whether their background is light or dark (by perceived luminance),
+  // so the (now large) picker reads as two clear sets rather than one long mixed list
+  const lum = (hex) => { const h = (hex || '').replace('#', ''); return 0.299 * parseInt(h.slice(0, 2), 16) + 0.587 * parseInt(h.slice(2, 4), 16) + 0.114 * parseInt(h.slice(4, 6), 16); };
+  const isLight = (p) => lum(p.bg) > 140;
+  const darkPals = PALETTES.filter(p => !isLight(p));
+  const lightPals = PALETTES.filter(p => isLight(p));
+  const shortName = (n) => n.replace(/\s*\(light\)$/i, '');   // the "Light" header makes the suffix redundant
 </script>
 
 <div class="htools">
@@ -21,14 +29,18 @@
       </button>
       {#if paletteOpen}
         <div class="ppmenu">
-          {#each PALETTES as p}
+          {#snippet swatch(p)}
             <button type="button" class="pt" class:on={p.id === target.palette} onclick={() => pickPalette(p.id)} title={p.name}>
               <span class="ptview" style="border-color:{p.rule}">
                 <i style="background:{p.bg}"></i><i style="background:{p.panel2}"></i><i style="background:{p.accent}"></i><i style="background:{p.ink}"></i>
               </span>
-              <span class="ptname">{p.name}{#if p.id === target.palette} ✓{/if}</span>
+              <span class="ptname">{shortName(p.name)}{#if p.id === target.palette} ✓{/if}</span>
             </button>
-          {/each}
+          {/snippet}
+          <div class="ppgrp">Dark</div>
+          {#each darkPals as p (p.id)}{@render swatch(p)}{/each}
+          <div class="ppgrp">Light</div>
+          {#each lightPals as p (p.id)}{@render swatch(p)}{/each}
         </div>
       {/if}
     </div>
@@ -67,8 +79,10 @@
   .ppsw i{flex:1}
   .ppname{white-space:nowrap}
   .ppcar{font-size:.6rem;color:var(--faint)}
-  .ppmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:var(--z-dropdown);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(320px,86vw);max-height:min(60vh,430px);overflow:auto;padding:10px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
-  .pt{display:flex;flex-direction:column;gap:5px;padding:5px;background:none;border:1px solid transparent;border-radius:8px;cursor:pointer}
+  .ppmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:var(--z-dropdown);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 8px;width:min(340px,90vw);max-height:min(64vh,460px);overflow:hidden auto;padding:10px 12px 12px;background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+  .ppgrp{grid-column:1/-1;font-family:var(--mono);font-size:.54rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);padding:8px 2px 3px;border-bottom:1px solid var(--line)}
+  .ppgrp:first-child{padding-top:2px}
+  .pt{display:flex;flex-direction:column;gap:5px;min-width:0;padding:5px;background:none;border:1px solid transparent;border-radius:8px;cursor:pointer}
   .pt:hover{border-color:var(--rule);background:var(--panel-2)}
   .pt.on{border-color:var(--accent)}
   .ptview{display:flex;height:34px;border-radius:6px;overflow:hidden;border:1px solid var(--rule)}

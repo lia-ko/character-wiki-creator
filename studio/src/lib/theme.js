@@ -23,7 +23,27 @@ export const PALETTES = [
   {id:"coral",    name:"Coral (light)",bg:"#fdeae2",panel:"#fef4ef",panel2:"#f9d8ca",ink:"#3d1c12",muted:"#8c5a43",faint:"#c08d77",accent:"#e8552e",accentSoft:"#c65a3f",rule:"#f3c9b6",line:"rgba(61,28,18,.10)"},
   {id:"lavender", name:"Lavender (light)",bg:"#efe8fb",panel:"#f6f1fd",panel2:"#e2d7f6",ink:"#241a3a",muted:"#6b5c8f",faint:"#9c8cc0",accent:"#7c3aed",accentSoft:"#8a5fd0",rule:"#d6c9ee",line:"rgba(36,26,58,.10)"},
   {id:"mint",     name:"Mint (light)",bg:"#e4f4ec",panel:"#eff9f3",panel2:"#d5eede",ink:"#123227",muted:"#4f7c69",faint:"#88ad9c",accent:"#0f9d6b",accentSoft:"#3f9d6d",rule:"#c2e4d3",line:"rgba(18,50,39,.10)"},
-  {id:"fuchsia",  name:"Fuchsia",  bg:"#1a0a13",panel:"#250f1c",panel2:"#321426",ink:"#f7dde9",muted:"#c88aa7",faint:"#8c5c75",accent:"#ff2d78",accentSoft:"#ff8ab5",rule:"#3e1a2e",line:"rgba(247,221,233,.08)"}
+  {id:"fuchsia",  name:"Fuchsia",  bg:"#1a0a13",panel:"#250f1c",panel2:"#321426",ink:"#f7dde9",muted:"#c88aa7",faint:"#8c5c75",accent:"#ff2d78",accentSoft:"#ff8ab5",rule:"#3e1a2e",line:"rgba(247,221,233,.08)"},
+  {id:"obsidian", name:"Obsidian",  bg:"#100c0b",panel:"#191211",panel2:"#211714",ink:"#ece0d8",muted:"#ab9084",faint:"#71594f",accent:"#e0662d",accentSoft:"#f2a274",rule:"#33221c",line:"rgba(236,224,216,.08)"},
+  {id:"nord",     name:"Nord",      bg:"#2b303b",panel:"#343b49",panel2:"#3e4657",ink:"#e6ebf2",muted:"#a3adbf",faint:"#78849a",accent:"#88c0d0",accentSoft:"#b3d8e2",rule:"#48505f",line:"rgba(230,235,242,.08)"},
+  {id:"neon",     name:"Neon",      bg:"#080c12",panel:"#0e1520",panel2:"#131f2e",ink:"#d3edf3",muted:"#77a3b0",faint:"#4e727e",accent:"#1fd6e8",accentSoft:"#7fe9f2",rule:"#1c2b3a",line:"rgba(211,237,243,.08)"},
+  {id:"synthwave",name:"Synthwave", bg:"#140a1e",panel:"#1e0f2d",panel2:"#28163e",ink:"#f2e0f2",muted:"#c093c9",faint:"#8a5f92",accent:"#ff5da2",accentSoft:"#ff9ec8",rule:"#3a1f4c",line:"rgba(242,224,242,.08)"},
+  {id:"abyss",    name:"Abyss",     bg:"#07141a",panel:"#0c1e26",panel2:"#102933",ink:"#cde6ea",muted:"#7ba6ad",faint:"#517880",accent:"#25b3a4",accentSoft:"#78d6cb",rule:"#183038",line:"rgba(205,230,234,.08)"},
+  {id:"copper",   name:"Copper",    bg:"#130e0b",panel:"#1d1510",panel2:"#261a13",ink:"#ecdacd",muted:"#b3937f",faint:"#7a5c4b",accent:"#c66838",accentSoft:"#e6a179",rule:"#33231a",line:"rgba(236,218,205,.08)"},
+  {id:"moss",     name:"Moss",      bg:"#0f120c",panel:"#171b12",panel2:"#1e2318",ink:"#dde3d1",muted:"#96a385",faint:"#616b52",accent:"#7f9e52",accentSoft:"#b6cf8e",rule:"#26301e",line:"rgba(221,227,209,.07)"},
+  {id:"cosmos",   name:"Cosmos",    bg:"#0b0a1a",panel:"#131228",panel2:"#1b1a3a",ink:"#e0def0",muted:"#9a97c4",faint:"#645f92",accent:"#7b6ef0",accentSoft:"#afa6f5",rule:"#2a2758",line:"rgba(224,222,240,.08)"},
+  {id:"rust",     name:"Rust",      bg:"#140d0a",panel:"#1d130e",panel2:"#261812",ink:"#ecdccf",muted:"#b3927d",faint:"#7a5b49",accent:"#b5502e",accentSoft:"#e08a6a",rule:"#33201a",line:"rgba(236,220,207,.08)"},
+  {id:"sky",      name:"Sky (light)",bg:"#e5edf5",panel:"#f1f6fb",panel2:"#d8e5f1",ink:"#16212e",muted:"#55677b",faint:"#8695a8",accent:"#2f7cb2",accentSoft:"#4f7ea0",rule:"#cddbe9",line:"rgba(22,33,46,.10)"},
+  {id:"sage",     name:"Sage (light)",bg:"#e7eee4",panel:"#f2f7ef",panel2:"#dae7d4",ink:"#19241a",muted:"#546a51",faint:"#87a082",accent:"#4a8f52",accentSoft:"#5e8f5f",rule:"#cbdcc4",line:"rgba(25,36,26,.10)"},
+  {id:"marigold", name:"Marigold (light)",bg:"#f4ecda",panel:"#faf4e6",panel2:"#ece0c6",ink:"#2c2413",muted:"#6e5f3c",faint:"#93835c",accent:"#c88a1e",accentSoft:"#a5762a",rule:"#ddceac",line:"rgba(44,36,19,.10)"},
+  {id:"paper",    name:"Paper (light)",bg:"#eef1f4",panel:"#fbfcfd",panel2:"#e3e8ee",ink:"#1a212b",muted:"#586574",faint:"#8792a1",accent:"#3763b0",accentSoft:"#5a7ab0",rule:"#d6dde5",line:"rgba(26,33,43,.10)"},
+  {id:"seafoam",  name:"Seafoam (light)",bg:"#e2f1ef",panel:"#eff8f6",panel2:"#d2e8e4",ink:"#12302c",muted:"#4f7a73",faint:"#85aca6",accent:"#17a091",accentSoft:"#3f8f84",rule:"#c2e0db",line:"rgba(18,48,44,.10)"},
+  {id:"periwinkle",name:"Periwinkle (light)",bg:"#e9ebfa",panel:"#f3f4fd",panel2:"#dcdff5",ink:"#1c1f3a",muted:"#5c6291",faint:"#8e93bf",accent:"#5b63d6",accentSoft:"#6a6fbf",rule:"#ced2ee",line:"rgba(28,31,58,.10)"},
+  {id:"buttercream",name:"Buttercream (light)",bg:"#f6f0d8",panel:"#fbf7e6",panel2:"#ede4c2",ink:"#2e2813",muted:"#6f6340",faint:"#968a5c",accent:"#c0921f",accentSoft:"#a17e2b",rule:"#ddd2a7",line:"rgba(46,40,19,.10)"},
+  {id:"clay",     name:"Clay (light)",bg:"#f1e6de",panel:"#f8f0ea",panel2:"#e6d4c8",ink:"#2f2018",muted:"#74584a",faint:"#a08574",accent:"#b25a3c",accentSoft:"#a5624a",rule:"#e0ccbc",line:"rgba(47,32,24,.10)"},
+  {id:"dove",     name:"Dove (light)",bg:"#ecebe8",panel:"#f6f5f3",panel2:"#e1dfdb",ink:"#22201d",muted:"#615e58",faint:"#918d85",accent:"#5f6b7a",accentSoft:"#727d8c",rule:"#dcdad5",line:"rgba(34,32,29,.10)"},
+  {id:"lilac",    name:"Lilac (light)",bg:"#f2e8f2",panel:"#f9f2f9",panel2:"#e8d8e8",ink:"#2a1c2a",muted:"#6f5a6f",faint:"#9c869c",accent:"#a94fb0",accentSoft:"#9a5aa0",rule:"#e0cce0",line:"rgba(42,28,42,.10)"},
+  {id:"rosewater",name:"Rosewater (light)",bg:"#f3e7e7",panel:"#faf1f1",panel2:"#ead5d5",ink:"#2c1c1c",muted:"#745858",faint:"#a08585",accent:"#b5566a",accentSoft:"#a55f6d",rule:"#e2cbcb",line:"rgba(44,28,28,.10)"}
 ];
 
 export function palById(id){ return PALETTES.find(p => p.id === id) || PALETTES[1]; }
