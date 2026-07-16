@@ -632,8 +632,22 @@ function sidenavHTML(project, ctx){
     }).join('');
     return `<div class="nfam"><div class="nfamh">${esc(f.label)}</div>${blocks}</div>`;
   }).join('');
+  // custom types aren't in any built-in family — group them under "Your types"
+  const inFamily = new Set(FAMILIES.flatMap(f => f.types));
+  const customPresent = ((project.types || []).map(t => t.type)).concat(Object.keys(byType))
+    .filter((t, i, a) => a.indexOf(t) === i && !inFamily.has(t) && (byType[t] || []).length);
+  const customBlocks = customPresent.map(t => {
+    const tpl = templateFor(t);
+    const items = byType[t].map(e => {
+      const cur = e.id === ctx.currentId; const label = esc(e.title || 'Untitled'); const h = ctx.href(e.id);
+      return `<li class="${cur ? 'cur' : ''}">${cur || !h ? `<span>${label}</span>` : `<a href="${esc(h)}">${label}</a>`}</li>`;
+    }).join('');
+    const open = byType[t].some(e => e.id === ctx.currentId) ? ' open' : '';
+    return `<details class="ntype"${open}><summary><span class="nic">${tpl.icon}</span><span class="nlbl">${esc(tpl.plural)}</span><span class="nct">${byType[t].length}</span></summary><ul>${items}</ul></details>`;
+  }).join('');
+  const customFam = customBlocks ? `<div class="nfam"><div class="nfamh">Your types</div>${customBlocks}</div>` : '';
   const hub = ctx.hubHref ? `<a class="nhub" href="${esc(ctx.hubHref)}">${esc(project.name || 'Project')}</a>` : `<span class="nhub cur">${esc(project.name || 'Project')}</span>`;
-  return `<aside class="sidenav"><div class="navhead">${hub}</div><nav class="navtree">${fams}</nav></aside>`;
+  return `<aside class="sidenav"><div class="navhead">${hub}</div><nav class="navtree">${fams}${customFam}</nav></aside>`;
 }
 const NAV_TOGGLE = `<button class="navtoggle" data-navtoggle aria-label="Toggle navigation">☰</button>`;
 const shell = (nav, content) => `<div class="shell">${nav}<button class="navback" data-navtoggle aria-label="Close navigation"></button><div class="content">${content}</div></div>`;
@@ -672,6 +686,16 @@ export function renderEntry(entry, ctx){
     if (sec.slot === 'band'){ bandInner += heading(sec, inner); continue; }
     if (sec.zone && sec.zone !== lastZone){ body += `<div class="zonebar"><span class="zt">${esc(sec.zone)}</span><span class="zl"></span></div>`; lastZone = sec.zone; }
     body += heading(sec, inner);
+  }
+  // sidebar features fall back into the main column when the layout has no general rail
+  // (only `codex` renders arbitrary aside sections) — so nothing the user added ever vanishes
+  if (layout !== 'codex'){
+    const hidden = entry.hidden || [];
+    for (const sec of tpl.sections){
+      if (sec.slot !== 'aside' || hidden.includes(sec.key) || sec === gallerySec || sec === statsSec) continue;
+      const inner = fieldHTML(entry, sec, ctx); if (!inner) continue;
+      body += heading(sec, inner);
+    }
   }
   body += backlinksHTML(ctx.backlinks, ctx);
   const bandsHTML = bandInner ? `<div class="bands">${bandInner}</div>` : '';
@@ -720,7 +744,11 @@ export function renderHub(project, ctx){
   const hrefs = ctx.hrefs || {};
   const groups = {}; ENTRY_TYPES.forEach(t => groups[t] = []);
   (project.entries || []).forEach(e => (groups[e.type] || (groups[e.type] = [])).push(e));
-  const secs = ENTRY_TYPES.filter(t => (groups[t] || []).length).map(t => {
+  // built-in order, then any custom types present (in the project's type order)
+  const customOrder = (project.types || []).map(t => t.type).filter(t => !ENTRY_TYPES.includes(t));
+  const extras = Object.keys(groups).filter(t => !ENTRY_TYPES.includes(t) && !customOrder.includes(t));
+  const order = [...ENTRY_TYPES, ...customOrder, ...extras];
+  const secs = order.filter(t => (groups[t] || []).length).map(t => {
     const tpl = templateFor(t);
     return `<section class="hsec"><h2><span class="hic">${tpl.icon}</span> ${esc(tpl.plural)}</h2><div class="hgrid">${groups[t].map(e => entryCard(e, hrefs[e.id])).join('')}</div></section>`;
   }).join('');

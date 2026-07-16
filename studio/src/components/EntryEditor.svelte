@@ -1,5 +1,6 @@
 <script>
-  import { curProject, curEntry, openProject, openEntry, markDirty, toast, addSection, delSection, hideSection, restoreSection, moveSection } from '../lib/store.svelte.js';
+  import { curProject, curEntry, openProject, openEntry, markDirty, toast, addFeatureSection, delSection, hideSection, restoreSection, moveSection } from '../lib/store.svelte.js';
+  import { FEATURE_GROUPS } from '../lib/features.js';
   import { dismissable } from '../lib/dismissable.js';
   import { templateFor } from '../lib/templates.js';
   import { coverOf, backlinksFor, ensureEntryData, bodySectionsOf } from '../lib/model.js';
@@ -69,8 +70,14 @@
     [cur[i], cur[j]] = [cur[j], cur[i]]; entry.asideOrder = cur; markDirty();
   }
   const bodySecs = $derived(entry ? bodySectionsOf(entry) : []);
+  // sidebar features only get a real rail in `codex`; in other layouts they fall back into
+  // the main column so nothing the user placed in the sidebar vanishes from the editor
+  const orphanAside = $derived.by(() => {
+    if (!tpl || !entry || layout === 'codex') return [];
+    return tpl.sections.filter(s => s.slot === 'aside' && !(entry.hidden || []).includes(s.key) && s !== gallerySec && s !== statsSec);
+  });
   // `band`-slot sections render full-width below the columns (codex); the rest are the article body
-  const mainSecs = $derived(bodySecs.filter(s => s.slot !== 'band'));
+  const mainSecs = $derived([...bodySecs.filter(s => s.slot !== 'band'), ...orphanAside]);
   const bandSecs = $derived(bodySecs.filter(s => s.slot === 'band'));
   const hiddenSecs = $derived(tpl && entry?.hidden?.length ? tpl.sections.filter(s => s.slot !== 'aside' && !s.lead && entry.hidden.includes(s.key)) : []);
   // addable (currently-hidden template) sections, grouped by their zone for the add menu
@@ -83,19 +90,10 @@
   // sections the current Kind suggests — highlighted in the Add menu (green in the mock)
   const suggested = $derived(entry ? suggestedSections(entry) : new Set());
 
-  // add / remove custom sections (headings) on this entry
+  // add / remove custom sections (headings) on this entry — the full builder feature palette,
+  // so any sheet (built-in or custom) can be enriched with any feature
   let secMenu = $state(false);
-  const ADD_TYPES = [
-    { type: 'richsections', label: 'Prose', hint: 'Headed write-ups' },
-    { type: 'gallery', label: 'Image plate', hint: 'Figures / images' },
-    { type: 'references', label: 'References', hint: 'Books, links, videos' },
-    { type: 'taggroups', label: 'Tag list', hint: 'Grouped chips' },
-    { type: 'excerpts', label: 'Quotes', hint: 'Quotations' },
-    { type: 'relations', label: 'Links', hint: 'Linked entries' },
-    { type: 'catalog', label: 'Catalog', hint: 'Field-guide cards' },
-  ];
-  const DEF_LABEL = { richsections: 'Notes', gallery: 'Image plate', references: 'References', taggroups: 'Traits', excerpts: 'Quotes', relations: 'Connections', catalog: 'Catalog' };
-  function doAdd(t){ addSection(entry, t.type, { label: DEF_LABEL[t.type] || 'New section' }); secMenu = false; }
+  function doAddFeature(feat){ addFeatureSection(entry, feat); secMenu = false; }
 
   // Backfill section keys added to the template after this entry was created (e.g. Soundtrack),
   // so their fields have a value to bind to. Silent — persists on the next real edit.
@@ -168,9 +166,11 @@
               {/each}
               <div class="addsep"></div>
             {/if}
-            <div class="addlabel">Custom block</div>
-            {#each ADD_TYPES as t}
-              <button class="addopt" onclick={() => doAdd(t)}><span>{t.label}</span><small>{t.hint}</small></button>
+            {#each FEATURE_GROUPS as g}
+              <div class="addlabel">{g.group}</div>
+              {#each g.features as feat}
+                <button class="addopt" onclick={() => doAddFeature(feat)}><span>{feat.name}</span><small>{feat.desc}</small></button>
+              {/each}
             {/each}
           </div>
         {/if}
@@ -356,7 +356,7 @@
   .addlabel{font-family:var(--mono);font-size:.54rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:4px 11px 2px}
   .addsecbtn{border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:var(--sans);font-size:.82rem}
   .addsecbtn:hover{border-color:var(--accent);color:var(--ink)}
-  .addmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);left:0;min-width:220px;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
+  .addmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);left:0;min-width:240px;max-height:min(64vh,520px);overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
   .addopt{display:flex;flex-direction:column;gap:1px;text-align:left;background:none;border:none;border-radius:7px;padding:8px 11px;cursor:pointer;color:var(--ink)}
   .addopt:hover{background:var(--panel-2)}
   .addopt span{font-family:var(--sans);font-size:.84rem}

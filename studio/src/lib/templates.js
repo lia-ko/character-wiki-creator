@@ -587,7 +587,26 @@ export const FAMILIES = [
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
 export const TYPE_ALIASES = { faction: 'organization' };
 
-export function templateFor(type){ return TEMPLATES[type] || TEMPLATES[TYPE_ALIASES[type]] || TEMPLATES.character; }
+/* ---- user-defined custom sheet types ----
+   Custom types share the built-in template shape ({type,label,plural,icon,layout,sections}).
+   They live in the workspace (ws.typeLibrary = the authoring library) and are imported as
+   COPIES into projects (project.types) so a project stays self-contained. This module-level
+   registry is rebuilt from the workspace on load / on any change, so templateFor() resolves
+   custom types with no change to its ~20 callers. */
+const CUSTOM_TYPES = {};
+export function rebuildCustomTypes(ws){
+  for (const k in CUSTOM_TYPES) delete CUSTOM_TYPES[k];
+  const add = (t) => { if (t && t.type && !TEMPLATES[t.type]) CUSTOM_TYPES[t.type] = t; };
+  // project copies first, then the library — so live edits in the builder win in-app,
+  // while a project moved/opened WITHOUT the library still resolves via its embedded copy.
+  (ws && ws.projects || []).forEach(p => (p.types || []).forEach(add));
+  (ws && ws.typeLibrary || []).forEach(add);
+  return CUSTOM_TYPES;
+}
+export function isCustomType(type){ return !!CUSTOM_TYPES[type]; }
+export function customTypeById(id){ return CUSTOM_TYPES[id] || null; }
+
+export function templateFor(type){ return TEMPLATES[type] || TEMPLATES[TYPE_ALIASES[type]] || CUSTOM_TYPES[type] || TEMPLATES.character; }
 
 // Every field type's empty starting value.
 export function emptyValue(section){

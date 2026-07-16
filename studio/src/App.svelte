@@ -26,6 +26,7 @@
   import ProjectsView from './components/ProjectsView.svelte';
   import ProjectView from './components/ProjectView.svelte';
   import EntryEditor from './components/EntryEditor.svelte';
+  import TypeBuilder from './components/TypeBuilder.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import TrashPanel from './components/TrashPanel.svelte';
   import Toast from './components/Toast.svelte';
@@ -64,6 +65,8 @@
     <ProjectsView />
   {:else if app.view === 'project'}
     <ProjectView />
+  {:else if app.view === 'builder'}
+    <TypeBuilder />
   {:else}
     <EntryEditor />
   {/if}

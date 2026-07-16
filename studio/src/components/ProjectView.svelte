@@ -49,12 +49,13 @@
   $effect(() => { p.name; fitTitle(); });                                   // re-fit on edit / project switch
   $effect(() => { if (!titleEl) return; const ro = new ResizeObserver(fitTitle); ro.observe(titleEl); return () => ro.disconnect(); });  // re-fit on column resize
 
-  // category filter + unified "New entry" picker
-  const familyOrder = FAMILIES.flatMap(f => f.types);
+  // category filter + unified "New entry" picker (built-in families + this project's custom types)
+  const customTypeIds = $derived((p.types || []).map(t => t.type));
+  const familyOrder = $derived([...FAMILIES.flatMap(f => f.types), ...customTypeIds]);
   let activeCat = $state('all');
-  const visibleTypes = $derived(activeCat === 'all' ? familyOrder : (FAMILIES.find(f => f.key === activeCat)?.types || []));
+  const visibleTypes = $derived(activeCat === 'all' ? familyOrder : activeCat === 'custom' ? customTypeIds : (FAMILIES.find(f => f.key === activeCat)?.types || []));
   const shownTypes = $derived(visibleTypes.filter(t => (groups[t] || []).length));   // hide empty type-sections
-  const activeLabel = $derived(activeCat === 'all' ? 'entries' : (FAMILIES.find(f => f.key === activeCat)?.label.toLowerCase() || ''));
+  const activeLabel = $derived(activeCat === 'all' ? 'entries' : activeCat === 'custom' ? 'your types' : (FAMILIES.find(f => f.key === activeCat)?.label.toLowerCase() || ''));
   const catCount = (types) => types.reduce((n, t) => n + ((groups[t] || []).length), 0);
 
   // multi-select export
@@ -126,6 +127,11 @@
           {f.label} <span class="cc">{catCount(f.types)}</span>
         </button>
       {/each}
+      {#if catCount(customTypeIds)}
+        <button class="cat" class:on={activeCat === 'custom'} onclick={() => activeCat = 'custom'}>
+          Your types <span class="cc">{catCount(customTypeIds)}</span>
+        </button>
+      {/if}
     </div>
     <div class="tbactions">
       <div class="sizectl" role="group" aria-label="card size" title="card size">

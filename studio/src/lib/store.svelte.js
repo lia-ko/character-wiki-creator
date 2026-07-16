@@ -1,6 +1,7 @@
 /* ============ REACTIVE APP STATE (Svelte 5 runes) ============ */
-import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySectionsOf } from './model.js';
-import { emptyValue } from './templates.js';
+import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySectionsOf, newCustomType, duplicateType, importTypeToProject, typeId, slugify } from './model.js';
+import { emptyValue, rebuildCustomTypes, isCustomType, customTypeById } from './templates.js';
+import { sectionFromFeature } from './features.js';
 import { idbSet, idbGet } from './persist.js';
 
 export const app = $state({
@@ -92,6 +93,7 @@ function commitHistory(){
 function restoreSnapshot(snap){
   restoring = true;
   app.ws = structuredClone(snap);
+  rebuildCustomTypes(app.ws);   // custom-type registry must track undo/redo
   reconcileSelection();
   saveNow();
   restoring = false;
@@ -101,6 +103,7 @@ function reconcileSelection(){
   if (!app.ws.projects.find(p => p.id === app.projectId)) app.projectId = app.ws.projects[0]?.id || null;
   const p = curProject();
   if (app.view === 'entry' && (!p || !p.entries.find(e => e.id === app.entryId))){ app.view = 'project'; app.entryId = null; }
+  if (app.view === 'builder' && !(app.ws.typeLibrary || []).some(t => t.type === app.builderTypeId)){ app.view = 'project'; }
 }
 export function undo(){ if (histTimer) commitHistory(); if (hIndex <= 0) return; hIndex--; restoreSnapshot(history[hIndex]); syncHist(); }
 export function redo(){ if (hIndex >= history.length - 1) return; hIndex++; restoreSnapshot(history[hIndex]); syncHist(); }
@@ -154,6 +157,19 @@ export function addSection(entry, type, opts = {}){
   if (type === 'catalog') def.scale = opts.scale || 'Rating';
   entry.extra.push(def);
   entry.data[key] = emptyValue(def);
+  markDirty();
+  return def;
+}
+// add ANY builder feature (with its default config) as a per-entry custom section, so any
+// sheet — built-in or custom — can be enriched with the full palette.
+export function addFeatureSection(entry, feature){
+  if (!entry.extra) entry.extra = [];
+  const usedKeys = bodySectionsOf(entry).map(s => s.key).concat((entry.extra || []).map(s => s.key));
+  const def = sectionFromFeature(feature, usedKeys);
+  def.key = 'x' + Date.now().toString(36) + (secSeq++);   // guaranteed-unique data-map key
+  def.slot = 'main'; def.custom = true; delete def.lead;   // per-entry blocks land in the body
+  entry.extra.push(def);
+  entry.data[def.key] = emptyValue(def);
   markDirty();
   return def;
 }
@@ -213,12 +229,84 @@ export function deleteProject(id){
 }
 export function addEntry(type){
   const p = curProject(); if (!p) return;
+  // if it's a library type not yet in this project, import a self-contained copy first
+  if (isCustomType(type) && !(p.types || []).some(t => t.type === type)){
+    importTypeToProject(p, customTypeById(type)); rebuildCustomTypes(app.ws);
+  }
   const e = createEntry(type, '');
-  e.title = 'New ' + type;
+  e.title = 'New ' + templateLabel(type);
   p.entries.push(e);
   markDirty();
   openEntry(e.id);
 }
+
+/* ---- custom sheet types (the workspace type library) ---- */
+function templateLabel(type){ const t = customTypeById(type); return t ? t.label.toLowerCase() : type; }
+export function typeLibrary(){ if (!Array.isArray(app.ws.typeLibrary)) app.ws.typeLibrary = []; return app.ws.typeLibrary; }
+// create a type in the library — blank, or forked from an existing type (built-in or custom)
+export function createCustomType(label, forkFrom){
+  const t = forkFrom ? duplicateType(forkFrom, label) : newCustomType(label);
+  typeLibrary().push(t);
+  rebuildCustomTypes(app.ws); markDirty();
+  return t;
+}
+// keep every project's embedded copy in step with the library master, so a project stays
+// self-contained AND current (portability without drift). Called on every builder edit.
+function syncTypeCopies(){
+  const lib = {}; (app.ws.typeLibrary || []).forEach(t => { lib[t.type] = t; });
+  (app.ws.projects || []).forEach(p => (p.types || []).forEach((t, i) => { if (lib[t.type]) p.types[i] = JSON.parse(JSON.stringify(lib[t.type])); }));
+}
+// call after mutating a library type in the builder, to sync copies + re-register + persist
+export function touchCustomTypes(){ syncTypeCopies(); rebuildCustomTypes(app.ws); markDirty(); }
+
+/* ---- sharing: a type (or a whole pack) is just JSON ---- */
+function downloadBlob(text, name, mime = 'application/json'){
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+export function exportType(id){
+  const t = typeLibrary().find(x => x.type === id); if (!t) return;
+  downloadBlob(JSON.stringify({ kind: 'sheettype', version: 1, type: $state.snapshot(t) }, null, 2), slugify(t.label) + '.sheettype.json');
+}
+export function exportAllTypes(){
+  const types = typeLibrary().map(t => $state.snapshot(t)); if (!types.length) { toast('No custom types to export'); return; }
+  downloadBlob(JSON.stringify({ kind: 'sheetpack', version: 1, types }, null, 2), (slugify(app.ws.title || 'my') + '-sheet-types.json'));
+}
+// accept a single type, a {kind:'sheettype'} wrapper, a {kind:'sheetpack',types:[]}, or a bare array
+export function importTypeFromJSON(text){
+  let obj; try { obj = JSON.parse(text); } catch { toast('That isn’t a valid type file'); return []; }
+  const raws = (obj && obj.kind === 'sheetpack' && Array.isArray(obj.types)) ? obj.types
+    : (obj && obj.kind === 'sheettype' && obj.type) ? [obj.type]
+    : Array.isArray(obj) ? obj : (obj && Array.isArray(obj.sections)) ? [obj] : [];
+  const added = [];
+  for (const raw of raws){
+    if (!raw || !Array.isArray(raw.sections)) continue;
+    const t = JSON.parse(JSON.stringify(raw));
+    t.custom = true;
+    t.type = typeId(t.label);   // always re-id (collision-free)
+    if (!t.plural) t.plural = (t.label || 'Type') + 's';
+    if (!t.layout) t.layout = 'hero';
+    typeLibrary().push(t); added.push(t);
+  }
+  if (!added.length){ toast('No sheet type found in that file'); return []; }
+  rebuildCustomTypes(app.ws); markDirty();
+  toast('Imported ' + added.length + ' sheet type' + (added.length > 1 ? 's' : ''));
+  return added;
+}
+export function deleteCustomType(id){
+  app.ws.typeLibrary = typeLibrary().filter(t => t.type !== id);
+  rebuildCustomTypes(app.ws); markDirty();
+}
+// make a project self-contained by importing a copy of a library type
+export function useTypeInProject(type){
+  const p = curProject(); if (!p || !type) return;
+  importTypeToProject(p, type); rebuildCustomTypes(app.ws); markDirty();
+}
+// the builder view: open on a library type (create one first via createCustomType)
+export function openBuilder(typeId){ app.builderTypeId = typeId; app.view = 'builder'; }
+export function builderType(){ return typeLibrary().find(t => t.type === app.builderTypeId) || null; }
+export function newTypeAndEdit(forkFrom){ const t = createCustomType('', forkFrom); openBuilder(t.type); }
 export function deleteEntry(id){
   const p = curProject(); if (!p) return;
   const e = p.entries.find(x => x.id === id);

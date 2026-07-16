@@ -2,20 +2,23 @@
    Workspace → Projects → Entries. An Entry is generic: it has a type and a `data`
    map keyed by its template's section keys. Nothing here is character-specific. */
 
-import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES } from './templates.js';
+import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES, rebuildCustomTypes } from './templates.js';
 
 // Normalize any renamed/aliased entry types in a loaded workspace (e.g. faction → organization).
 export function migrateWorkspace(ws){
   if (!Array.isArray(ws.trash)) ws.trash = [];
+  if (!Array.isArray(ws.typeLibrary)) ws.typeLibrary = [];   // the user's custom-type library
   (ws?.projects || []).forEach(p => {
     if (p.portraitScale == null) p.portraitScale = 1;
     if (p.cover == null) p.cover = '';
     if (p.spotify == null) p.spotify = [];
-    (p.entries || []).forEach(e => {
-      if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
-      ensureEntryData(e);
-    });
+    if (!Array.isArray(p.types)) p.types = [];               // imported copies of custom types
   });
+  rebuildCustomTypes(ws);                                     // must precede ensureEntryData (custom types)
+  (ws?.projects || []).forEach(p => (p.entries || []).forEach(e => {
+    if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
+    ensureEntryData(e);
+  }));
   return ws;
 }
 
@@ -95,7 +98,7 @@ export function createProject(name, genre){
   return {
     id: uid(), name: name || 'New project', genre: genre || '',
     palette: 'slate', headFont: 'playfair-display', bodyFont: 'eb-garamond',
-    headScale: 1, bodyScale: 1, portraitScale: 1, cover: '', spotify: [], entries: [],
+    headScale: 1, bodyScale: 1, portraitScale: 1, cover: '', spotify: [], entries: [], types: [],
   };
 }
 
@@ -105,8 +108,35 @@ export function createWorkspace(){
   return {
     title: 'Your World', palette: 'slate',
     headFont: 'playfair-display', bodyFont: 'eb-garamond', headScale: 1, bodyScale: 1,
-    projects: [p], trash: [],
+    projects: [p], trash: [], typeLibrary: [],
   };
+}
+
+/* ---- custom sheet types ----
+   A custom type is the same object shape as a built-in template. `newCustomType` starts
+   blank; `duplicateType` forks a built-in (or another custom type) as a starting point;
+   `importTypeToProject` copies a library type into a project so it stays self-contained. */
+// a unique custom-type id (the uid tail is seq+random → collision-free even within one ms)
+export function typeId(label){ return 'ct_' + slugify(label || 'type') + '_' + (uid().split('-').pop() || uid().slice(-6)); }
+export function newCustomType(label){
+  const nm = (label || 'New type').trim() || 'New type';
+  return {
+    type: typeId(nm), label: nm, plural: nm + 's',
+    icon: '◆', layout: 'hero', media: 'none', custom: true,
+    sections: [{ key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true }],
+  };
+}
+export function duplicateType(srcType, label){
+  const base = JSON.parse(JSON.stringify(templateFor(srcType)));
+  const nm = (label || (base.label + ' copy')).trim();
+  base.type = typeId(nm);
+  base.custom = true; base.label = nm; base.plural = nm.endsWith('s') ? nm : nm + 's';
+  return base;
+}
+export function importTypeToProject(project, type){
+  if (!project || !type) return;
+  if (!Array.isArray(project.types)) project.types = [];
+  if (!project.types.some(t => t.type === type.type)) project.types.push(JSON.parse(JSON.stringify(type)));
 }
 
 // A gallery item is a URL string or, once repositioned, { src, pos } where pos is
