@@ -204,6 +204,16 @@ export function moveSection(entry, key, dir){
   entry.order = order;
   markDirty();
 }
+// drag reorder: drop section `fromKey` onto the slot held by `toKey`
+export function moveSectionTo(entry, fromKey, toKey){
+  const order = bodySectionsOf(entry).filter(s => !s.lead).map(s => s.key);
+  const from = order.indexOf(fromKey), to = order.indexOf(toKey);
+  if (from < 0 || to < 0 || from === to) return;
+  const [m] = order.splice(from, 1);
+  order.splice(from < to ? to - 1 : to, 0, m);
+  entry.order = order;
+  markDirty();
+}
 
 /* ---- navigation ---- */
 // content width (workspace-wide): scales the layout max-widths so wide screens aren't dead space

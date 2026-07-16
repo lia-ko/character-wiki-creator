@@ -275,8 +275,10 @@ export const TEMPLATES = {
   },
   plot: {
     type: 'plot', label: 'Plotline', plural: 'Plot', icon: '✎', layout: 'outline',
+    mediaPlace: true,   // per-entry image placement: top banner / side column / right rail
     title: { ph: 'Plotline title' }, subtitle: { ph: 'arc / thread (optional)' },
     sections: [
+      { key: 'gallery', label: 'Key art', type: 'gallery', slot: 'aside' },
       { key: 'logline', label: 'Logline', type: 'richline', slot: 'main', lead: true },
       { key: 'structure', label: 'Structure', type: 'outline', slot: 'main' },
     ],
@@ -568,10 +570,124 @@ export const TEMPLATES = {
       { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main' },
     ],
   },
+
+  /* ---- GM / DM stat block: an NPC or monster combat card. Portrait on the side, the
+     six ability scores in a grid, defenses + details as key→value rows, and named
+     Traits / Actions / Reactions / Legendary actions. Reused blocks + one new
+     `abilityscores` grid. ---- */
+  statblock: {
+    type: 'statblock', label: 'Stat Block', plural: 'Stat Blocks', icon: '⚔', layout: 'split',
+    title: { ph: 'Creature / NPC name' }, subtitle: { ph: 'size type, alignment — e.g. Large dragon, chaotic evil' },
+    sections: [
+      { key: 'gallery', label: 'Portrait', type: 'gallery', slot: 'aside' },
+      { key: 'summary', label: 'Description', type: 'richline', slot: 'main', lead: true },
+      { key: 'defense', label: 'Defenses', type: 'deflist', slot: 'main', termPh: 'stat', defPh: 'value', notePh: 'note', addLabel: 'defense',
+        rowDefaults: [{ term: 'Armor Class' }, { term: 'Hit Points' }, { term: 'Speed' }] },
+      { key: 'abilities', label: 'Ability Scores', type: 'abilityscores', slot: 'main', mod: 'dnd', abils: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'] },
+      { key: 'details', label: 'Details', type: 'deflist', slot: 'main', termPh: 'trait', defPh: 'value', notePh: 'note', addLabel: 'detail',
+        rowDefaults: [{ term: 'Saving Throws' }, { term: 'Skills' }, { term: 'Damage Resistances' }, { term: 'Condition Immunities' }, { term: 'Senses' }, { term: 'Languages' }, { term: 'Challenge' }, { term: 'Proficiency Bonus' }] },
+      { key: 'traits', label: 'Traits', type: 'richsections', slot: 'main', optional: true },
+      { key: 'actions', label: 'Actions', type: 'richsections', slot: 'main' },
+      { key: 'reactions', label: 'Reactions', type: 'richsections', slot: 'main', optional: true },
+      { key: 'legendary', label: 'Legendary Actions', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- GM / DM encounter: a prep sheet for a single scene of conflict. Infobox rail holds
+     the map + at-a-glance vitals (difficulty / XP / party); the article holds the read-aloud
+     setup, the linked adversaries (their stat blocks), tactics & triggers, terrain and loot. ---- */
+  encounter: {
+    type: 'encounter', label: 'Encounter', plural: 'Encounters', icon: '⚑', layout: 'codex',
+    title: { ph: 'Encounter name — e.g. Ambush at Redbridge' }, subtitle: { ph: 'location / difficulty (optional)' },
+    sections: [
+      { key: 'summary', label: 'Setup', type: 'richline', slot: 'main', lead: true },
+      { key: 'gallery', label: 'Map & scene', type: 'gallery', slot: 'aside' },
+      { key: 'vitals', label: 'At a glance', type: 'stats', slot: 'aside', defaults: ['Difficulty', 'XP budget', 'Party', 'Environment', 'Light'] },
+      { key: 'adversaries', label: 'Adversaries', type: 'relations', slot: 'main', display: 'expand', linkTypes: ['statblock', 'entity', 'character'], addLabel: 'foe' },
+      { key: 'tactics', label: 'Tactics & triggers', type: 'richsections', slot: 'main' },
+      { key: 'terrain', label: 'Terrain & features', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'treasure', label: 'Treasure & rewards', type: 'richsections', slot: 'main', optional: true },
+      { key: 'aftermath', label: 'Aftermath / development', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- Storyteller / World of Darkness character (splat-agnostic, V5-flavored). Works for
+     vampires, mages, werewolves, hunters, demons + homebrew: 9 attributes & skills as dot
+     ratings, a generic Powers grid (Disciplines / Gifts / Arcana / Edges), Willpower + a
+     Humanity/Integrity track, a renamable core-drive resource (Hunger / Rage / Desperation),
+     and Touchstones & Convictions. Everything is editable — nothing is splat-locked. ---- */
+  storyteller: {
+    type: 'storyteller', label: 'Storyteller Character', plural: 'Storyteller Characters', icon: '☾', layout: 'codex',
+    title: { ph: 'Character name' }, subtitle: { ph: 'concept / splat (optional)' },
+    sections: [
+      { key: 'gallery', label: 'Portrait', type: 'gallery', slot: 'aside' },
+      { key: 'identity', label: 'Identity', type: 'stats', slot: 'aside', defaults: ['Concept', 'Chronicle', 'Type / Splat', 'Faction', 'Ambition', 'Desire'] },
+      { key: 'trackers', label: 'Trackers', type: 'abilityscores', slot: 'aside', mod: 'dots', dotsMax: 10, abils: ['Willpower', 'Humanity'] },
+      { key: 'drive', label: 'Core Drive', type: 'abilityscores', slot: 'aside', mod: 'dots', dotsMax: 5, abils: ['Hunger'] },
+      { key: 'summary', label: 'Concept', type: 'richline', slot: 'main', lead: true },
+      { key: 'attributes', label: 'Attributes', type: 'abilityscores', slot: 'main', mod: 'dots', dotsMax: 5,
+        abils: ['Strength', 'Dexterity', 'Stamina', 'Charisma', 'Manipulation', 'Composure', 'Intelligence', 'Wits', 'Resolve'] },
+      { key: 'skills', label: 'Skills', type: 'abilityscores', slot: 'main', mod: 'dots', dotsMax: 5,
+        abils: ['Athletics', 'Brawl', 'Craft', 'Drive', 'Firearms', 'Larceny', 'Melee', 'Stealth', 'Survival', 'Animal Ken', 'Etiquette', 'Insight', 'Intimidation', 'Leadership', 'Performance', 'Persuasion', 'Streetwise', 'Subterfuge', 'Academics', 'Awareness', 'Finance', 'Investigation', 'Medicine', 'Occult', 'Politics', 'Science', 'Technology'] },
+      { key: 'specialties', label: 'Specialties', type: 'taggroups', slot: 'main', optional: true },
+      { key: 'powers', label: 'Powers', type: 'abilityscores', slot: 'main', mod: 'dots', dotsMax: 5, abils: ['', '', ''] },
+      { key: 'powerdesc', label: 'Powers in detail', type: 'richsections', slot: 'main', optional: true },
+      { key: 'touchstones', label: 'Touchstones & Convictions', type: 'relations', slot: 'main', display: 'expand', linkTypes: ['character'], addLabel: 'touchstone' },
+      { key: 'advantages', label: 'Merits, Flaws & Backgrounds', type: 'taggroups', slot: 'main' },
+      { key: 'bio', label: 'Background & notes', type: 'richsections', slot: 'main' },
+    ],
+  },
+
+  /* ---- GM / DM roll table: a random table you can click to roll. Holds one table by default;
+     add more `rolltable` sections for tiered loot, rumours, wandering encounters, etc. ---- */
+  rolltable: {
+    type: 'rolltable', label: 'Roll Table', plural: 'Roll Tables', icon: '⚄', layout: 'hero', media: 'none',
+    title: { ph: 'Table name — e.g. Wilderness Loot' }, subtitle: { ph: 'when to use it (optional)' },
+    sections: [
+      { key: 'summary', label: 'About', type: 'richline', slot: 'main', lead: true },
+      { key: 'table', label: 'Table', type: 'rolltable', slot: 'main' },
+      { key: 'notes', label: 'Notes', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- GM / DM quest: a trackable objective. Infobox holds status / giver / reward; the
+     article holds the hook, a tickable objectives checklist, stakes, rewards and links. ---- */
+  quest: {
+    type: 'quest', label: 'Quest', plural: 'Quests', icon: '❖', layout: 'codex',
+    title: { ph: 'Quest name — e.g. The Missing Caravan' }, subtitle: { ph: 'quest giver / type (optional)' },
+    sections: [
+      { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside', optional: true },
+      { key: 'vitals', label: 'Quest', type: 'stats', slot: 'aside', defaults: ['Status', 'Giver', 'Location', 'Reward', 'Deadline'] },
+      { key: 'summary', label: 'Hook', type: 'richline', slot: 'main', lead: true },
+      { key: 'objectives', label: 'Objectives', type: 'checklist', slot: 'main', addLabel: 'objective' },
+      { key: 'complications', label: 'Stakes & complications', type: 'richsections', slot: 'main', optional: true },
+      { key: 'rewards', label: 'Rewards', type: 'deflist', slot: 'main', termPh: 'reward', defPh: 'detail', addLabel: 'reward', optional: true },
+      { key: 'connections', label: 'People, places & clues', type: 'relations', slot: 'main', display: 'expand' },
+      { key: 'log', label: 'Progress log', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
+
+  /* ---- GM / DM session log: per-session prep + recap. Infobox holds the date / number / XP;
+     the article holds a one-line summary, a prep checklist, the recap, loot, NPCs met and
+     open threads. ---- */
+  session: {
+    type: 'session', label: 'Session Log', plural: 'Session Logs', icon: '▤', layout: 'codex',
+    title: { ph: 'Session title — e.g. Session 12 · The Sunken Vault' }, subtitle: { ph: 'date / arc (optional)' },
+    sections: [
+      { key: 'vitals', label: 'Session', type: 'stats', slot: 'aside', defaults: ['Date', 'Session #', 'Location', 'XP awarded', 'Present'] },
+      { key: 'summary', label: 'In one line', type: 'richline', slot: 'main', lead: true },
+      { key: 'agenda', label: 'Prep / agenda', type: 'checklist', slot: 'main', addLabel: 'scene', optional: true },
+      { key: 'recap', label: 'Recap', type: 'richsections', slot: 'main' },
+      { key: 'loot', label: 'Loot & rewards', type: 'deflist', slot: 'main', termPh: 'item', defPh: 'detail', addLabel: 'item', optional: true },
+      { key: 'npcs', label: 'NPCs & factions', type: 'relations', slot: 'main', display: 'expand', optional: true },
+      { key: 'threads', label: 'Open threads & cliffhangers', type: 'checklist', slot: 'main', addLabel: 'thread' },
+      { key: 'notes', label: 'GM notes', type: 'richsections', slot: 'main', optional: true },
+    ],
+  },
 };
 
 // Display order for the type picker / project view.
-export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','setting','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','operation','theme','lore','item','system','power','entity','research','source','article'];
+export const ENTRY_TYPES = ['character','relationship','house','organization','species','realm','location','setting','business','dwelling','flora','fauna','religion','beliefs','folklore','language','event','plot','timeline','case','clue','operation','theme','lore','item','system','power','entity','research','source','article','statblock','encounter','storyteller','rolltable','quest','session'];
 
 // Type families — group the entry types for the project-view category filter + the
 // "New entry" picker. Source of truth for section order too (people → places → nature → culture → story → lore).
@@ -582,6 +698,7 @@ export const FAMILIES = [
   { key: 'culture', label: 'Culture', types: ['religion','beliefs','folklore','language'] },
   { key: 'story',   label: 'Story',   types: ['event','plot','timeline','case','clue','operation','theme'] },
   { key: 'lore',    label: 'Lore',    types: ['lore','item','system','power','entity','research','source','article'] },
+  { key: 'game',    label: 'Game',    types: ['statblock','encounter','storyteller','rolltable','quest','session'] },
 ];
 
 // Back-compat: earlier saves used 'faction'; treat it as 'organization'.
@@ -649,6 +766,13 @@ export function emptyValue(section){
     case 'allegianceweb': return [];
     case 'eventtimeline': return null;
     case 'spotify': return [];
+    case 'rolltable': return { die: 20, rows: [{ range: '', text: '' }] };
+    case 'checklist': return [];
+    case 'abilityscores': {
+      const mode = section.mod || 'value';
+      const labels = (section.abils && section.abils.length) ? section.abils : ['Stat 1', 'Stat 2', 'Stat 3'];
+      return { mode, max: section.dotsMax || 5, rows: labels.map(l => ({ label: l, value: mode === 'dnd' ? 10 : (mode === 'dots' ? 0 : '') })) };
+    }
     default: return '';
   }
 }

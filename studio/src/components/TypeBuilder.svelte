@@ -55,6 +55,9 @@
       case 'embed': return [{ url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', caption: 'A sample embed' }];
       case 'matrix': return { people: [{ id: 'a', targetId: '', name: 'Ada' }, { id: 'b', targetId: '', name: 'Bran' }, { id: 'c', targetId: '', name: 'Cass' }], pairs: { 'a|b': 'ally', 'b|c': 'enemy', 'a|c': 'rival' } };
       case 'statchart': return { stats: [{ label: 'STR', value: 8 }, { label: 'DEX', value: 5 }, { label: 'CON', value: 7 }, { label: 'INT', value: 3 }, { label: 'WIS', value: 6 }, { label: 'CHA', value: 9 }], max: 10, view: 'radar' };
+      case 'abilityscores': return { mode: s.mod || 'value', rows: ((s.abils && s.abils.length) ? s.abils : ['Cool', 'Hard', 'Hot', 'Sharp', 'Weird']).map((l, i) => ({ label: l, value: s.mod === 'dnd' ? [16, 12, 14, 10, 13][i] ?? 10 : ['+2', '+1', '0', '-1', '+1'][i] ?? '+0' })) };
+      case 'rolltable': return { die: 6, rows: [{ range: '1-2', text: 'A common result' }, { range: '3-4', text: 'An uncommon result' }, { range: '5', text: 'A rare find' }, { range: '6', text: 'Something wild' }] };
+      case 'checklist': return [{ done: true, text: 'A finished step' }, { done: false, text: 'A step still to do' }, { done: false, text: 'Another open item' }];
       case 'orgchart': return { nodes: [{ id: 'r', targetId: '', name: '', title: 'Commander', parentId: '' }, { id: 'a', targetId: '', name: '', title: 'First officer', parentId: 'r' }, { id: 'b', targetId: '', name: '', title: 'Quartermaster', parentId: 'r' }, { id: 'c', targetId: '', name: '', title: 'Sergeant', parentId: 'a' }] };
       case 'arc': return { type: 'positive', pos: null, believes: 'Where it begins', is: 'the starting state', turn: 'the crucible', learns: 'where it ends', becomes: 'the new state', want: 'the drive', need: 'the truth' };
       case 'dialectic': return { left: 'One position, stated.', right: 'The counter-position.' };

@@ -1,5 +1,5 @@
 <script>
-  import { app, curProject, curEntry, openProject, openEntry, markDirty, toast, addFeatureSection, delSection, hideSection, restoreSection, moveSection, stepEntry, orderedEntries, toggleNav } from '../lib/store.svelte.js';
+  import { app, curProject, curEntry, openProject, openEntry, markDirty, toast, addFeatureSection, delSection, hideSection, restoreSection, moveSection, moveSectionTo, stepEntry, orderedEntries, toggleNav } from '../lib/store.svelte.js';
   import { FEATURE_GROUPS } from '../lib/features.js';
   import { dismissable } from '../lib/dismissable.js';
   import { templateFor } from '../lib/templates.js';
@@ -49,6 +49,8 @@
   // per-entry image placement (templates with mediaToggle) — defaults to the side rail
   const mediaSide = $derived((entry?.mediaPos || 'side') === 'side');
   function setMediaPos(p){ if (entry){ entry.mediaPos = p; markDirty(); } }
+  // outline templates (plot) support a 3-way image placement: top banner / side / right rail
+  const mpos = $derived(entry?.mediaPos || 'top');
 
   const gallerySec = $derived(tpl?.sections.find(s => s.type === 'gallery') || null);
   const statsSec = $derived(tpl?.sections.find(s => s.type === 'stats') || null);
@@ -103,6 +105,34 @@
   // sections the current Kind suggests — highlighted in the Add menu (green in the mock)
   const suggested = $derived(entry ? suggestedSections(entry) : new Set());
 
+  // drag-to-reorder body sections (mirrors the field-list Reorder; grip on each header).
+  // A registry of key→header element lets us hit-test the nearest header while dragging.
+  const secReg = new Map();
+  function secRegister(el, key){ secReg.set(key, el); return { destroy(){ if (secReg.get(key) === el) secReg.delete(key); } }; }
+  let secDragging = $state(false);
+  let secFrom = null, secTarget = null;
+  function secDown(e, key){
+    e.preventDefault(); e.stopPropagation();
+    secFrom = key; secTarget = null; secDragging = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    document.body.classList.add('ro-dragging');
+  }
+  function secMove(e){
+    if (!secDragging) return;
+    let best = null, bd = Infinity;
+    for (const [k, el] of secReg){ const b = el.getBoundingClientRect(); const d = Math.abs((b.top + b.bottom) / 2 - e.clientY); if (d < bd){ bd = d; best = k; } }
+    for (const [, el] of secReg) el.classList.remove('secdrop');
+    secTarget = best && best !== secFrom ? best : null;
+    if (secTarget) secReg.get(secTarget)?.classList.add('secdrop');
+  }
+  function secUp(){
+    if (!secDragging) return;
+    secDragging = false; document.body.classList.remove('ro-dragging');
+    for (const [, el] of secReg) el.classList.remove('secdrop');
+    if (secTarget && secTarget !== secFrom) moveSectionTo(entry, secFrom, secTarget);
+    secFrom = null; secTarget = null;
+  }
+
   // add / remove custom sections (headings) on this entry — the full builder feature palette,
   // so any sheet (built-in or custom) can be enriched with any feature
   let secMenu = $state(false);
@@ -113,6 +143,11 @@
   const filteredAddable = $derived(secQ ? addableGroups.map(g => ({ zone: g.zone, secs: g.secs.filter(s => (s.label || '').toLowerCase().includes(secQ)) })).filter(g => g.secs.length) : addableGroups);
   const filteredFeatures = $derived(secQ ? FEATURE_GROUPS.map(g => ({ ...g, features: g.features.filter(f => (f.name + ' ' + f.desc).toLowerCase().includes(secQ)) })).filter(g => g.features.length) : FEATURE_GROUPS);
   function focusOnMount(node){ node.focus(); }
+  // add-menu organization: a left category rail + a right items pane (search falls back to flat)
+  const hasSheetSecs = $derived(addableGroups.some(g => g.secs.length));
+  let secCat = $state('');
+  const activeGroup = $derived(FEATURE_GROUPS.find(g => g.group === secCat) || null);
+  function openAddMenu(){ secQuery = ''; secMenu = !secMenu; if (secMenu) secCat = hasSheetSecs ? 'sheet' : (FEATURE_GROUPS[0]?.group || ''); }
   $effect(() => { if (!secMenu) secQuery = ''; });
 
   // Backfill section keys added to the template after this entry was created (e.g. Soundtrack),
@@ -143,6 +178,14 @@
         <button class:on={mediaSide} onclick={() => setMediaPos('side')}>Side</button>
       </span>
     {/if}
+    {#if tpl.mediaPlace && gallerySec}
+      <span class="mtoggle" title="where the image sits">
+        <span class="mtl">Image</span>
+        <button class:on={mpos === 'top'} onclick={() => setMediaPos('top')}>Top</button>
+        <button class:on={mpos === 'side'} onclick={() => setMediaPos('side')}>Side</button>
+        <button class:on={mpos === 'rail'} onclick={() => setMediaPos('rail')}>Rail</button>
+      </span>
+    {/if}
     {#if jumpSecs.length > 3}
       <div class="jumpwrap" use:dismissable={() => jumpMenu = false}>
         <button class="jumpbtn" onclick={() => jumpMenu = !jumpMenu} title="jump to a section" aria-expanded={jumpMenu}>☰ Sections</button>
@@ -170,7 +213,8 @@
         {#if sec.lead}
           <Field {entry} {sec} {others} />
         {:else if sec.custom}
-          <div class="csh" id="sec-{sec.key}">
+          <div class="csh" id="sec-{sec.key}" use:secRegister={sec.key}>
+            <button class="secgrip" onpointerdown={(e) => secDown(e, sec.key)} onpointermove={secMove} onpointerup={secUp} onpointercancel={secUp} title="drag to reorder" aria-label="drag to reorder section" tabindex="-1">⠿</button>
             <button class="seccol" onclick={() => toggleCollapse(sec.key)} title={collapsed.has(sec.key) ? 'expand' : 'collapse'} aria-label="collapse section">{collapsed.has(sec.key) ? '▸' : '▾'}</button>
             <input class="cshin" bind:value={sec.label} oninput={markDirty} placeholder="Heading…" />
             <div class="seccc">
@@ -181,9 +225,9 @@
           </div>
           {#if !collapsed.has(sec.key)}<Field {entry} {sec} {others} />{/if}
         {:else}
-          <div class="secwrap" id="sec-{sec.key}">
+          <div class="secwrap" id="sec-{sec.key}" use:secRegister={sec.key}>
             <button class="seccol" onclick={() => toggleCollapse(sec.key)} title={collapsed.has(sec.key) ? 'expand' : 'collapse'} aria-label="collapse section">{collapsed.has(sec.key) ? '▸' : '▾'}</button>
-            <h2>{sec.label}</h2>
+            <h2 class="sechd" onpointerdown={(e) => secDown(e, sec.key)} onpointermove={secMove} onpointerup={secUp} onpointercancel={secUp} title="drag to reorder"><span class="secgrip" aria-hidden="true">⠿</span>{sec.label}</h2>
             <div class="seccc onhover">
               <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move section up">▲</button>
               <button class="csmv" onclick={() => moveSection(entry, sec.key, 1)} title="move section down">▼</button>
@@ -191,30 +235,55 @@
             </div>
           </div>
           {#if !collapsed.has(sec.key)}<Field {entry} {sec} {others} />{/if}
-          <Field {entry} {sec} {others} />
         {/if}
       {/each}
       <div class="addsec" use:dismissable={() => secMenu = false}>
-        <button class="addsecbtn" onclick={() => secMenu = !secMenu}>＋ Add section</button>
+        <button class="addsecbtn" onclick={openAddMenu}>＋ Add section</button>
         {#if secMenu}
           <div class="addmenu">
             <input class="addsearch" use:focusOnMount bind:value={secQuery} placeholder="Filter — timeline, radar, table…" spellcheck="false" />
-            {#if filteredAddable.length}
-              {#each filteredAddable as g}
-                <div class="addlabel">{g.zone}</div>
-                {#each g.secs as s}
-                  <button class="addopt" class:suggested={suggested.has(s.key)} onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>{suggested.has(s.key) ? 'suggested' : 'section'}</small></button>
+            {#if secQ}
+              <!-- text search: flat matches across sheet sections + every feature -->
+              <div class="addflat">
+                {#each filteredAddable as g}
+                  <div class="addlabel">{g.zone}</div>
+                  {#each g.secs as s}
+                    <button class="addopt" class:suggested={suggested.has(s.key)} onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>{suggested.has(s.key) ? 'suggested' : 'section'}</small></button>
+                  {/each}
                 {/each}
-              {/each}
-              <div class="addsep"></div>
+                {#each filteredFeatures as g}
+                  <div class="addlabel">{g.group}</div>
+                  {#each g.features as feat}
+                    <button class="addopt" onclick={() => doAddFeature(feat)}><span>{feat.name}</span><small>{feat.desc}</small></button>
+                  {/each}
+                {/each}
+                {#if !filteredAddable.length && !filteredFeatures.length}<div class="addnone">No features match “{secQuery}”.</div>{/if}
+              </div>
+            {:else}
+              <!-- browse: category rail on the left, items on the right -->
+              <div class="addpanes">
+                <div class="addcats">
+                  {#if hasSheetSecs}<button class:on={secCat === 'sheet'} onclick={() => secCat = 'sheet'}><span class="cdot sug"></span>This sheet</button>{/if}
+                  {#each FEATURE_GROUPS as g}
+                    <button class:on={secCat === g.group} onclick={() => secCat = g.group}><span class="cdot" style="background:{g.color}"></span>{g.group}</button>
+                  {/each}
+                </div>
+                <div class="addpane">
+                  {#if secCat === 'sheet'}
+                    {#each addableGroups as g}
+                      <div class="addlabel">{g.zone}</div>
+                      {#each g.secs as s}
+                        <button class="addopt" class:suggested={suggested.has(s.key)} onclick={() => { restoreSection(entry, s.key); secMenu = false; }}><span>{s.label}</span><small>{suggested.has(s.key) ? 'suggested' : 'section'}</small></button>
+                      {/each}
+                    {/each}
+                  {:else if activeGroup}
+                    {#each activeGroup.features as feat}
+                      <button class="addopt" onclick={() => doAddFeature(feat)}><span>{feat.name}</span><small>{feat.desc}</small></button>
+                    {/each}
+                  {/if}
+                </div>
+              </div>
             {/if}
-            {#each filteredFeatures as g}
-              <div class="addlabel">{g.group}</div>
-              {#each g.features as feat}
-                <button class="addopt" onclick={() => doAddFeature(feat)}><span>{feat.name}</span><small>{feat.desc}</small></button>
-              {/each}
-            {/each}
-            {#if !filteredAddable.length && !filteredFeatures.length}<div class="addnone">No features match “{secQuery}”.</div>{/if}
           </div>
         {/if}
       </div>
@@ -222,9 +291,29 @@
 
     <!-- ============ OUTLINE (plot) ============ -->
     {#if layout === 'outline'}
-      <div class="wrap-narrow">
-        {@render bodyList()}
-      </div>
+      {#if tpl.mediaPlace && gallerySec && mpos === 'side'}
+        <div class="wsplit">
+          <div class="media"><Gallery {entry} sec={gallerySec} variant="feature" aspect="3/4" /></div>
+          <div class="col">
+            <EntryTitle {entry} {tpl} />
+            {@render bodyList()}
+          </div>
+        </div>
+      {:else if tpl.mediaPlace && gallerySec && mpos === 'rail'}
+        <div class="wbody">
+          <main class="article">
+            <EntryTitle {entry} {tpl} />
+            {@render bodyList()}
+          </main>
+          <aside class="infobox"><Gallery {entry} sec={gallerySec} variant="feature" aspect="3/4" /></aside>
+        </div>
+      {:else}
+        <div class="wrap-narrow">
+          {#if tpl.mediaPlace && gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" aspect="16/9" />{/if}
+          <EntryTitle {entry} {tpl} />
+          {@render bodyList()}
+        </div>
+      {/if}
 
     <!-- ============ SPLIT (character, item) ============ -->
     {:else if layout === 'split'}
@@ -368,7 +457,8 @@
   .mtoggle .mtl{font-family:var(--mono);font-size:.54rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
   .mtoggle button{font:inherit;font-size:.68rem;background:var(--panel-2);color:var(--muted);border:1px solid var(--rule);padding:5px 10px;cursor:pointer;border-radius:0}
   .mtoggle button:first-of-type{border-radius:7px 0 0 7px}
-  .mtoggle button:last-of-type{border-radius:0 7px 7px 0;border-left:none}
+  .mtoggle button:last-of-type{border-radius:0 7px 7px 0}
+  .mtoggle button:not(:first-of-type){border-left:none}
   .mtoggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .wctl{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
   .wctl button{border:none;background:var(--panel-2);color:var(--faint);cursor:pointer;padding:5px 7px;border-right:1px solid var(--rule);display:flex;align-items:center}
@@ -404,6 +494,18 @@
   .seccol{border:none;background:none;color:var(--faint);cursor:pointer;font-size:.72rem;line-height:1;padding:3px;border-radius:4px;flex:0 0 auto}
   .seccol:hover{color:var(--ink);background:var(--panel-2)}
   .secwrap>.seccol{position:absolute;left:-24px;top:19px}
+  /* drag-to-reorder: the heading itself is the drag handle (template sections);
+     custom-heading sections use the inline grip button before the input */
+  .sechd{cursor:grab}
+  .sechd:active{cursor:grabbing}
+  .secgrip{color:var(--faint);font-size:.72em;letter-spacing:-2px;margin-right:9px;opacity:0;transition:opacity .12s;vertical-align:middle}
+  .secwrap:hover .sechd .secgrip{opacity:.85}
+  .sechd:active .secgrip{color:var(--accent);opacity:1}
+  button.secgrip{border:none;background:none;color:var(--faint);cursor:grab;font-size:.8rem;line-height:1;padding:3px 2px;margin:0;border-radius:4px;letter-spacing:-2px;touch-action:none;flex:0 0 auto;opacity:1}
+  button.secgrip:hover{color:var(--muted)}
+  button.secgrip:active{cursor:grabbing;color:var(--accent)}
+  .secdrop{position:relative}
+  .secdrop::after{content:'';position:absolute;left:0;right:0;top:-6px;height:2px;background:var(--accent);border-radius:2px;box-shadow:0 0 6px var(--accent);pointer-events:none}
   .secwrap,.csh{scroll-margin-top:calc(var(--appbar-h) + 64px)}
   .jumpwrap{position:relative}
   .jumpbtn{font:inherit;font-size:.74rem;background:var(--panel-2);color:var(--ink);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer}
@@ -427,9 +529,18 @@
   .addlabel{font-family:var(--mono);font-size:.54rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:4px 11px 2px}
   .addsecbtn{border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:var(--sans);font-size:.82rem}
   .addsecbtn:hover{border-color:var(--accent);color:var(--ink)}
-  .addmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);left:0;min-width:240px;max-height:min(64vh,520px);overflow:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
-  .addsearch{position:sticky;top:-6px;z-index:1;margin:-6px -6px 4px;padding:9px 11px;background:var(--panel);border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;font-size:.84rem;outline:none}
+  .addmenu{position:absolute;z-index:var(--z-dropdown);top:calc(100% + 6px);left:0;width:460px;max-width:92vw;max-height:min(70vh,540px);overflow:hidden;background:var(--panel);border:1px solid var(--rule);border-radius:10px;box-shadow:0 18px 44px rgba(0,0,0,.35);display:flex;flex-direction:column}
+  .addsearch{flex:none;padding:10px 12px;background:var(--panel);border:none;border-bottom:1px solid var(--rule);color:var(--ink);font:inherit;font-size:.84rem;outline:none}
   .addsearch::placeholder{color:var(--faint)}
+  .addflat{flex:1;min-height:0;overflow:auto;padding:6px;display:flex;flex-direction:column;gap:2px}
+  .addpanes{display:flex;flex:1;min-height:0}
+  .addcats{flex:none;width:136px;border-right:1px solid var(--rule);padding:6px;display:flex;flex-direction:column;gap:1px;overflow:auto}
+  .addcats button{display:flex;align-items:center;gap:8px;text-align:left;font:inherit;font-size:.77rem;color:var(--muted);background:none;border:none;border-radius:6px;padding:6px 9px;cursor:pointer;white-space:nowrap}
+  .addcats button:hover{background:var(--panel-2);color:var(--ink)}
+  .addcats button.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 2px 0 var(--accent)}
+  .cdot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--faint)}
+  .cdot.sug{background:var(--ok,#4aa579)}
+  .addpane{flex:1;min-width:0;overflow:auto;padding:6px;display:flex;flex-direction:column;gap:2px}
   .addnone{padding:10px 11px;color:var(--faint);font-size:.82rem}
   .addopt{display:flex;flex-direction:column;gap:1px;text-align:left;background:none;border:none;border-radius:7px;padding:8px 11px;cursor:pointer;color:var(--ink)}
   .addopt:hover{background:var(--panel-2)}

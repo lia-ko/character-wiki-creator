@@ -15,7 +15,9 @@ export const FEATURE_GROUPS = [
     { type: 'gauges', name: 'At-a-glance gauges', desc: 'Little pip-meters & values, side by side.', icon: '◔', sec: { label: 'At a glance', slot: 'aside' } },
     { type: 'meter', name: 'Scale / meter', desc: 'One labelled level-scale (threat, rarity…).', icon: '▮', sec: { label: 'Scale', slot: 'main', levels: ['Low', 'Mid', 'High'] } },
     { type: 'table', name: 'Table', desc: 'A multi-column grid — columns & rows you define.', icon: '⊞', sec: { label: 'Table', slot: 'main' } },
+    { type: 'rolltable', name: 'Roll table', desc: 'A dice table you click to roll — loot, rumours, encounters.', icon: '⚄', sec: { label: 'Roll table', slot: 'main' } },
     { type: 'statchart', name: 'Stat chart / radar', desc: 'A radar or bar chart of numeric attributes.', icon: '⬡', sec: { label: 'Stats', slot: 'main' } },
+    { type: 'abilityscores', name: 'Score grid', desc: 'Named stat cards — D&D abilities, PbtA, Fate, %-based; optional auto modifiers.', icon: '⬢', sec: { label: 'Scores', slot: 'main', mod: 'value', abils: ['Stat 1', 'Stat 2', 'Stat 3'] } },
   ] },
   { group: 'Media', color: '#8a86c9', features: [
     { type: 'gallery', name: 'Image gallery', desc: 'A carousel of images or a plate.', icon: '▦', sec: { label: 'Imagery', slot: 'aside' } },
@@ -33,6 +35,7 @@ export const FEATURE_GROUPS = [
   { group: 'Collect', color: '#c98a6a', features: [
     { type: 'catalog', name: 'Field-guide catalog', desc: 'Grouped cards with a scale badge + link-out.', icon: '▤', sec: { label: 'Catalog', slot: 'main', scale: 'Rarity' } },
     { type: 'taggroups', name: 'Tag groups', desc: 'Grouped chips — traits, tags, features.', icon: '◧', sec: { label: 'Tags', slot: 'main' } },
+    { type: 'checklist', name: 'Checklist', desc: 'Tickable to-dos — objectives, prep, open threads.', icon: '☑', sec: { label: 'Checklist', slot: 'main' } },
   ] },
   { group: 'Story', color: '#b0596a', features: [
     { type: 'timeline', name: 'Timeline', desc: 'A chronicle of dated beats (3 views).', icon: '◷', sec: { label: 'Timeline', slot: 'main' } },

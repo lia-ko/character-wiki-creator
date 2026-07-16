@@ -38,6 +38,9 @@
   import EventTimeline from './EventTimeline.svelte';
   import Timeline from './Timeline.svelte';
   import Spotify from './Spotify.svelte';
+  import AbilityScores from './AbilityScores.svelte';
+  import RollTable from './RollTable.svelte';
+  import Checklist from './Checklist.svelte';
 
   let { entry, sec, others } = $props();
   function setRichline(v){ entry.data[sec.key] = v; markDirty(); }
@@ -119,6 +122,12 @@
   <Timeline {entry} {sec} {others} />
 {:else if sec.type === 'spotify'}
   <Spotify items={entry.data[sec.key]} />
+{:else if sec.type === 'abilityscores'}
+  <AbilityScores {entry} {sec} />
+{:else if sec.type === 'rolltable'}
+  <RollTable {entry} {sec} />
+{:else if sec.type === 'checklist'}
+  <Checklist {entry} {sec} />
 {/if}
 
 <style>

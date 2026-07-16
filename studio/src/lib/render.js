@@ -700,8 +700,58 @@ function fieldHTML(entry, sec, ctx){
     case 'allegianceweb': return webHTML(v, entry, ctx);
     case 'eventtimeline': return timelineHTML(entry, ctx);
     case 'spotify': return spotifyHTML(v);
+    case 'abilityscores': return abilityScoresHTML(v);
+    case 'rolltable': return rolltableHTML(v);
+    case 'checklist': return checklistHTML(v);
     default: return '';
   }
+}
+
+function checklistHTML(v){
+  if (!Array.isArray(v)) return '';
+  const rows = v.filter(r => r.text && String(r.text).trim());
+  if (!rows.length) return '';
+  const done = rows.filter(r => r.done).length;
+  const items = rows.map(r => `<div class="ckrow${r.done ? ' done' : ''}"><span class="ckbox">${r.done ? '☑' : '☐'}</span><span class="cktext">${esc(r.text)}</span></div>`).join('');
+  return `<div class="checklist"><div class="ckhd">${done}/${rows.length}</div>${items}</div>`;
+}
+
+function rolltableHTML(v){
+  if (!v || !Array.isArray(v.rows)) return '';
+  const rows = v.rows.filter(r => (r.range && String(r.range).trim()) || (r.text && String(r.text).trim()));
+  if (!rows.length) return '';
+  const die = parseInt(v.die, 10) || rows.length || 1;
+  const pr = (s) => { if (s == null) return null; s = String(s).trim(); const m = s.match(/^(\d+)\s*[-–]\s*(\d+)$/); if (m) return [+m[1], +m[2]]; if (/^\d+$/.test(s)) return [+s, +s]; return null; };
+  const body = rows.map(r => {
+    const rg = pr(r.range); const attrs = rg ? ` data-min="${rg[0]}" data-max="${rg[1]}"` : '';
+    return `<div class="rtrow"${attrs}><span class="rtrange">${esc(r.range || '')}</span><span class="rttext">${esc(r.text || '')}</span></div>`;
+  }).join('');
+  return `<div class="rolltable" data-die="${die}"><div class="rtrows">${body}</div><div class="rtbar"><button type="button" class="rtroll">🎲 Roll d${die}</button><span class="rtresult"></span></div></div>`;
+}
+
+function abilityScoresHTML(v){
+  if (!v) return '';
+  let rows, mode;
+  if (Array.isArray(v.rows)){ rows = v.rows; mode = v.mode; }
+  else if (typeof v === 'object'){   // legacy fixed-key shape
+    rows = [['str', 'STR'], ['dex', 'DEX'], ['con', 'CON'], ['int', 'INT'], ['wis', 'WIS'], ['cha', 'CHA']].map(([k, l]) => ({ label: l, value: v[k] }));
+    mode = 'dnd';
+  } else return '';
+  rows = rows.filter(r => (r.label && String(r.label).trim()) || (r.value !== undefined && r.value !== null && r.value !== ''));
+  if (!rows.length) return '';
+  const dnd = mode === 'dnd', dots = mode === 'dots', dmax = v.max || 5;
+  const mod = (x) => { const n = parseInt(x, 10); if (Number.isNaN(n)) return '—'; const m = Math.floor((n - 10) / 2); return (m >= 0 ? '+' : '') + m; };
+  const dotRow = (val) => `<div class="dots">${Array.from({ length: dmax }, (_, i) => `<span class="dot${(parseInt(val, 10) || 0) > i ? ' fill' : ''}"></span>`).join('')}</div>`;
+  const cells = rows.map(r => {
+    let inner;
+    if (dots) inner = dotRow(r.value);
+    else {
+      const shown = (r.value === undefined || r.value === null || r.value === '') ? '—' : esc(String(r.value));
+      inner = `<div class="absc">${shown}</div>${dnd ? `<div class="abmod">${mod(r.value)}</div>` : ''}`;
+    }
+    return `<div class="ab${dots ? ' isdots' : ''}"><div class="abl">${esc(r.label || '')}</div>${inner}</div>`;
+  }).join('');
+  return `<div class="abil">${cells}</div>`;
 }
 
 // persistent site sidebar: families -> types (collapsible) -> entry links, current highlighted
@@ -795,7 +845,13 @@ export function renderEntry(entry, ctx){
 
   let main = '';
   if (layout === 'outline'){
-    main = `<div class="wrap-narrow">${title}${body}</div>`;
+    if (tpl.mediaPlace && gal && entry.mediaPos === 'side'){
+      main = `<div class="wsplit"><div class="media">${gal}</div><div class="col">${title}${body}</div></div>`;
+    } else if (tpl.mediaPlace && gal && entry.mediaPos === 'rail'){
+      main = `<div class="wbody"><main class="article">${title}${body}</main><aside class="infobox">${gal}</aside></div>`;
+    } else {
+      main = `<div class="wrap-narrow">${gal}${title}${body}</div>`;
+    }
   } else if (layout === 'split'){
     main = `<div class="wsplit"><div class="media">${gal}</div><div class="col">${title}${stats}${body}</div></div>`;
   } else if (layout === 'hero'){
@@ -859,7 +915,7 @@ export function renderIndex(ws, ctx){
 }
 
 /* ---- reader JS: carousels + collapsibles are native <details>; only carousels need JS ---- */
-export const READER_JS = `(function(){document.querySelectorAll('.carousel').forEach(function(c){var st=c.querySelector('.cstage');var sl=[].slice.call(st.querySelectorAll('.cslide'));if(sl.length<2)return;var cnt=c.querySelector('.ccount');var i=0;function s(){sl.forEach(function(x,k){x.className='cslide'+(k===i?' on':'');});if(cnt)cnt.textContent=(i+1)+' / '+sl.length;}var p=c.querySelector('.cprev'),n=c.querySelector('.cnext');if(p)p.onclick=function(){i=(i-1+sl.length)%sl.length;s();};if(n)n.onclick=function(){i=(i+1)%sl.length;s();};});var sh=document.querySelector('.shell');if(sh){document.querySelectorAll('[data-navtoggle]').forEach(function(b){b.onclick=function(){sh.classList.toggle('nav-open');};});}})();`;
+export const READER_JS = `(function(){document.querySelectorAll('.carousel').forEach(function(c){var st=c.querySelector('.cstage');var sl=[].slice.call(st.querySelectorAll('.cslide'));if(sl.length<2)return;var cnt=c.querySelector('.ccount');var i=0;function s(){sl.forEach(function(x,k){x.className='cslide'+(k===i?' on':'');});if(cnt)cnt.textContent=(i+1)+' / '+sl.length;}var p=c.querySelector('.cprev'),n=c.querySelector('.cnext');if(p)p.onclick=function(){i=(i-1+sl.length)%sl.length;s();};if(n)n.onclick=function(){i=(i+1)%sl.length;s();};});var sh=document.querySelector('.shell');if(sh){document.querySelectorAll('[data-navtoggle]').forEach(function(b){b.onclick=function(){sh.classList.toggle('nav-open');};});}document.querySelectorAll('.rolltable').forEach(function(t){var die=+t.getAttribute('data-die')||20;var btn=t.querySelector('.rtroll');var out=t.querySelector('.rtresult');var rows=[].slice.call(t.querySelectorAll('.rtrow'));if(!btn)return;btn.onclick=function(){var r=1+Math.floor(Math.random()*die);var hit=-1;rows.forEach(function(row,idx){row.classList.remove('hit');var mn=+row.getAttribute('data-min'),mx=+row.getAttribute('data-max');if(hit<0&&!isNaN(mn)&&r>=mn&&r<=mx)hit=idx;});if(hit>=0)rows[hit].classList.add('hit');if(out)out.textContent='Rolled '+r+(hit<0?' · no match':'');};});})();`;
 
 export function docShell({ title, palette, headFont, bodyFont, headScale, bodyScale, portraitScale, fontPrefix, faceCSS, bodyHTML }){
   const faces = faceCSS != null ? faceCSS : fontFaceCSS(fontPrefix || '/fonts/', [headFont, bodyFont]);
