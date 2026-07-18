@@ -791,6 +791,7 @@ export function emptyValue(section){
     case 'references': return [];
     case 'deflist': return [];
     case 'lexicon': return [];
+    case 'phrasebook': return [];
     case 'chronology': return [];
     case 'sourcenotes': return { chapters: [] };
     case 'ledger': return [];

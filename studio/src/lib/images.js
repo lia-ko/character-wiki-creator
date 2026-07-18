@@ -1,4 +1,8 @@
-/* Image picking + downscaling to keep embedded data URLs reasonable. Ported from the original app. */
+/* Image picking + downscaling to keep embedded data URLs reasonable. Ported from the original app.
+   Picked images are registered into the image pool and returned as small "img:<id>" refs, so the
+   heavy base64 never enters the workspace $state (see imagepool.js). */
+import { registerImage } from './imagepool.js';
+
 const IMG_MAX = 1000;
 
 function processImage(file, cb){
@@ -27,7 +31,7 @@ function readImages(files, cb){
   const arr = [].slice.call(files), out = [], n = arr.length;
   if (!n){ cb([]); return; }
   let done = 0;
-  arr.forEach((f, idx) => processImage(f, (u) => { out[idx] = u; done++; if (done === n) cb(out); }));
+  arr.forEach((f, idx) => processImage(f, (u) => { out[idx] = registerImage(u); done++; if (done === n) cb(out); }));
 }
 
 export function pickImages(multiple){

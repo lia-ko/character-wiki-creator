@@ -2,6 +2,7 @@
   import { markDirty, openEntry, confirmDelete, createLinkedEntry } from '../../lib/store.svelte.js';
   import { templateFor } from '../../lib/templates.js';
   import { pickImages } from '../../lib/images.js';
+  import { resolveImg } from '../../lib/imagepool.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
   import NewEntryMenu from '../NewEntryMenu.svelte';
@@ -26,7 +27,7 @@
   const secondary = $derived(linkTypes ? others.filter(o => !linkTypes.includes(o.type)) : []);
 
   const linkedOf = (r) => others.find(o => o.id === r.targetId);
-  const imgOf = (r) => r.img || linkedOf(r)?.cover || '';   // pull the linked entry's cover if none set
+  const imgOf = (r) => resolveImg(r.img) || linkedOf(r)?.cover || '';   // pull the linked entry's cover if none set
 
   let open = $state({ 0: true });
   function toggle(i){ open[i] = !open[i]; }

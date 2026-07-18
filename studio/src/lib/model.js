@@ -3,6 +3,34 @@
    map keyed by its template's section keys. Nothing here is character-specific. */
 
 import { templateFor, emptyValue, ENTRY_TYPES, TYPE_ALIASES, rebuildCustomTypes } from './templates.js';
+import { resolveImg } from './imagepool.js';
+
+// One-time upgrade: outline beats used to carry a separate `links: [entryId]` array shown as
+// chips. Those are now inline [[id|title]] mentions inside the beat's rich text. Fold any existing
+// link ids into the beat text (preserving them) and drop the old array.
+function foldBeatLinks(p){
+  const titleById = {};
+  (p.entries || []).forEach(e => { titleById[e.id] = (e.title || 'Untitled').replace(/[|\]]/g, ''); });
+  (p.entries || []).forEach(e => {
+    const data = e.data || {};
+    for (const k in data){
+      const v = data[k];
+      if (!v || typeof v !== 'object' || !Array.isArray(v.acts)) continue;   // only outline fields
+      v.acts.forEach(a => (a.chapters || []).forEach(ch => (ch.beats || []).forEach(bt => {
+        if (Array.isArray(bt.links) && bt.links.length){
+          let text = String(bt.text || '');
+          bt.links.forEach(id => {
+            if (id && titleById[id] != null && !text.includes('[[' + id + '|')){
+              text += (text && !/\s$/.test(text) ? ' ' : '') + `[[${id}|${titleById[id]}]]`;
+            }
+          });
+          bt.text = text;
+        }
+        delete bt.links;
+      })));
+    }
+  });
+}
 
 // Normalize any renamed/aliased entry types in a loaded workspace (e.g. faction → organization).
 export function migrateWorkspace(ws){
@@ -17,10 +45,13 @@ export function migrateWorkspace(ws){
     if (!Array.isArray(p.types)) p.types = [];               // imported copies of custom types
   });
   rebuildCustomTypes(ws);                                     // must precede ensureEntryData (custom types)
-  (ws?.projects || []).forEach(p => (p.entries || []).forEach(e => {
-    if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
-    ensureEntryData(e);
-  }));
+  (ws?.projects || []).forEach(p => {
+    (p.entries || []).forEach(e => {
+      if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
+      ensureEntryData(e);
+    });
+    foldBeatLinks(p);   // outline beats: retire the old links[] chips into inline [[id|title]] mentions
+  });
   return ws;
 }
 
@@ -152,7 +183,7 @@ export function coverOf(entry){
   for (const k in entry.data){
     const v = entry.data[k];
     if (Array.isArray(v) && v.length){
-      const s = imgSrc(v[0]);
+      const s = resolveImg(imgSrc(v[0]));
       if (typeof s === 'string' && /^data:|^https?:|^\.\.?\//.test(s)) return s;
     }
   }

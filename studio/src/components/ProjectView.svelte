@@ -1,6 +1,7 @@
 <script>
   import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow, toast, undo, confirmModal } from '../lib/store.svelte.js';
   import { coverOf, entriesByType } from '../lib/model.js';
+  import { resolveImg } from '../lib/imagepool.js';
   import { ENTRY_TYPES, FAMILIES, templateFor } from '../lib/templates.js';
   import ThemeBar from './ThemeBar.svelte';
   import FontSample from './FontSample.svelte';
@@ -94,8 +95,8 @@
   <div class="hero">
     <div class="hleft">
       <div class="covwrap">
-        <button class="covpick" style={(p.cover || fallbackCover) ? `background-image:url(${p.cover || fallbackCover})` : ''} onclick={setCover} title="set project cover">
-          {#if !(p.cover || fallbackCover)}<span class="covph">＋<br>cover</span>{/if}
+        <button class="covpick" style={(resolveImg(p.cover) || fallbackCover) ? `background-image:url(${resolveImg(p.cover) || fallbackCover})` : ''} onclick={setCover} title="set project cover">
+          {#if !(resolveImg(p.cover) || fallbackCover)}<span class="covph">＋<br>cover</span>{/if}
         </button>
         {#if p.cover}<button class="covclear" onclick={clearCover} title="clear cover (use first entry)">✕</button>{/if}
       </div>

@@ -30,6 +30,7 @@
   import SourceNotes from './SourceNotes.svelte';
   import DefList from './DefList.svelte';
   import Lexicon from './Lexicon.svelte';
+  import Phrasebook from './Phrasebook.svelte';
   import Chronology from './Chronology.svelte';
   import TagGroups from './TagGroups.svelte';
   import Excerpts from './Excerpts.svelte';
@@ -59,7 +60,7 @@
     meter: Meter, kind: Kind, gauges: Gauges, arc: Arc, rulelist: Rulelist, dyad: Dyad,
     suspects: Suspects, clues: Clues, crew: Crew, dialectic: Dialectic, table: Table,
     embed: Embed, matrix: Matrix, statchart: Statchart, orgchart: Orgchart, ledger: Ledger,
-    references: References, sourcenotes: SourceNotes, deflist: DefList, lexicon: Lexicon,
+    references: References, sourcenotes: SourceNotes, deflist: DefList, lexicon: Lexicon, phrasebook: Phrasebook,
     chronology: Chronology, taggroups: TagGroups, excerpts: Excerpts, outline: Outline,
     lineage: Lineage, familytree: FamilyTree, history: History, ties: Ties,
     allegianceweb: AllegianceWeb, eventtimeline: EventTimeline, timeline: Timeline,

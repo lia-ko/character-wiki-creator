@@ -3,6 +3,7 @@ import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySect
 import { emptyValue, rebuildCustomTypes, isCustomType, customTypeById, ENTRY_TYPES } from './templates.js';
 import { sectionFromFeature } from './features.js';
 import { idbSet, idbGet } from './persist.js';
+import { loadPool, deImageWorkspace } from './imagepool.js';
 
 export const app = $state({
   ws: createWorkspace(),
@@ -59,15 +60,23 @@ export function curEntry(){
 }
 /* ---- local autosave (IndexedDB) so a refresh never loses work ---- */
 let saveTimer = null, restored = false;
+// The workspace snapshot is a deep clone; run it when the main thread is idle so it never
+// lands between two keystrokes. Falls back to a macrotask where requestIdleCallback is absent.
+const idle = (fn) => (typeof requestIdleCallback === 'function') ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 0);
 function scheduleSave(){
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { idbSet('workspace', $state.snapshot(app.ws)).catch(() => {}); }, 500);
+  saveTimer = setTimeout(() => idle(() => { idbSet('workspace', $state.snapshot(app.ws)).catch(() => {}); }), 700);
 }
 export async function restoreWorkspace(){
+  await loadPool();   // image bytes into memory before we resolve any refs
   try {
     const saved = await idbGet('workspace');
     if (saved && Array.isArray(saved.projects) && saved.projects.length){
-      app.ws = migrateWorkspace(saved); app.projectId = saved.projects[0].id; app.entryId = null; app.view = 'projects';
+      app.ws = migrateWorkspace(saved);
+      const extracted = deImageWorkspace(app.ws);   // legacy bibles: pull still-inline data: images into the pool
+      app.projectId = saved.projects[0].id; app.entryId = null; app.view = 'projects';
+      restored = true;
+      if (extracted) saveNow();   // one-time upgrade: flush the now-lighter ws so base64 leaves the kv blob
     }
   } catch (_) {}
   restored = true;
@@ -82,7 +91,7 @@ const HIST_CAP = 25;
 const syncHist = () => { app.histIndex = hIndex; app.histLen = history.length; };
 
 export function initHistory(){ history = [$state.snapshot(app.ws)]; hIndex = 0; syncHist(); }
-function scheduleHistory(){ if (restoring) return; if (histTimer) clearTimeout(histTimer); histTimer = setTimeout(commitHistory, 500); }
+function scheduleHistory(){ if (restoring) return; if (histTimer) clearTimeout(histTimer); histTimer = setTimeout(() => idle(commitHistory), 900); }
 function commitHistory(){
   if (restoring) return;
   if (histTimer){ clearTimeout(histTimer); histTimer = null; }

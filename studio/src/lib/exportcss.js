@@ -410,6 +410,17 @@ export const READER_CSS = [
 ".lex .ex b{display:block;font-style:normal;font-family:var(--mono);font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}",
 ".lex .ts{font-family:var(--mono);font-size:.52rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:9px}",
 
+/* phrasebook — phrases grouped by category: phrase · translation · literal gloss · usage */
+".phrasebook{display:flex;flex-direction:column;gap:20px;margin:2px 0 6px}",
+".pbcat-h{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule)}",
+".pbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}",
+".phrasebook .phrase{border:1px solid var(--rule);border-radius:10px;background:var(--panel);padding:12px 15px;display:flex;flex-direction:column;gap:6px}",
+".phrasebook .phw{font-family:var(--head);font-size:calc(1.22rem*var(--hs,1));color:var(--ink);line-height:1.15}",
+".phrasebook .phtr{color:var(--ink);font-size:calc(.98rem*var(--bs,1));line-height:1.45}",
+".phrasebook .phlit{font-family:var(--mono);font-size:.72rem;color:var(--muted);line-height:1.4}",
+".phrasebook .phlit span{color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-size:.6rem}",
+".phrasebook .phuse{margin-top:1px;padding-top:8px;border-top:1px dashed var(--rule);font-style:italic;color:var(--muted);font-size:.9rem;line-height:1.45}",
+
 /* definition list — glossary / quick facts */
 ".deflist{display:flex;flex-direction:column;gap:6px;margin:2px 0 6px}",
 ".deflist .drow{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,2fr);gap:16px;align-items:baseline;border-bottom:1px solid var(--rule-soft,var(--rule));padding:8px 2px}",
@@ -481,6 +492,7 @@ export const READER_CSS = [
 ".twist .twbadge{font-family:var(--mono);font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;border:1px solid var(--rule);border-radius:20px;padding:2px 9px;align-self:center}",
 ".twist .twface{display:flex;gap:9px;font-size:calc(.95rem*var(--bs,1))}",
 ".twist .twl{font-family:var(--mono);font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);width:52px;flex:0 0 52px;text-align:right;padding-top:4px}",
+".twist .twbody{font-size:calc(.95rem*var(--bs,1));line-height:1.55;color:var(--ink);white-space:pre-wrap}",
 ".twist .twhinge{font-family:var(--mono);font-size:.58rem;letter-spacing:.04em;color:var(--muted);margin-top:1px}",
 /* avoid / anachronism variant */
 ".deflist.avoidlist{gap:7px}",
@@ -563,7 +575,7 @@ export const READER_CSS = [
 ".outline{display:flex;flex-direction:column;gap:10px}",
 ".act{border:1px solid var(--rule);border-radius:8px;background:var(--panel);padding:12px 14px}.act .at{font-family:var(--head);font-size:calc(1.2rem*var(--hs,1));color:var(--ink);margin-bottom:6px}",
 ".chap{border-left:2px solid var(--rule);margin:8px 0 8px 6px;padding-left:12px}.chap .ct{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}",
-".beat{font-family:var(--body);font-size:calc(.95rem*var(--bs,1));color:var(--ink);opacity:.92;margin:4px 0}.beat .dot{color:var(--accent-soft)}",
+".beat{display:flex;gap:8px;font-family:var(--body);font-size:calc(.95rem*var(--bs,1));color:var(--ink);opacity:.92;margin:6px 0}.beat .dot{color:var(--accent-soft);flex:none;line-height:1.6}.beat .btext{flex:1;min-width:0}.beat .btext p{margin:0 0 .45em}.beat .btext p:last-child{margin-bottom:0}",
 
 /* lineage */
 ".lineage{overflow-x:auto}.lcanvas{display:flex;gap:30px;justify-content:center;padding:8px 4px}",

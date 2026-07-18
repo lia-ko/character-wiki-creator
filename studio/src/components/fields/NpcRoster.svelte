@@ -1,13 +1,14 @@
 <script>
   import { markDirty, confirmDelete, openEntry } from '../../lib/store.svelte.js';
   import { pickImages } from '../../lib/images.js';
+  import { resolveImg } from '../../lib/imagepool.js';
   import Reorder from '../Reorder.svelte';
   let { entry, sec, others } = $props();
   const list = $derived(Array.isArray(entry.data[sec.key]) ? entry.data[sec.key] : []);
   const people = $derived((others || []).filter(o => o.type === 'character'));
   const rest = $derived((others || []).filter(o => o.type !== 'character'));
   const linkedOf = (id) => (others || []).find(o => o.id === id);
-  const coverOf = (r) => (r.targetId && linkedOf(r.targetId)?.cover) || r.img || '';
+  const coverOf = (r) => (r.targetId && linkedOf(r.targetId)?.cover) || resolveImg(r.img) || '';
   const nameOf = (r) => r.name || (r.targetId && linkedOf(r.targetId)?.title) || '';
 
   const DISP = [{ v: '', l: '—' }, { v: 'friendly', l: 'friendly' }, { v: 'neutral', l: 'neutral' }, { v: 'wary', l: 'wary' }, { v: 'hostile', l: 'hostile' }];

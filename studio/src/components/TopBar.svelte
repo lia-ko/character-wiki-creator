@@ -1,6 +1,7 @@
 <script>
   import { app, curProject, curEntry, openProjects, openProject, openSearch, openTrash, undo, redo, clearDirty, markDirty, saveNow, toast, setContentWidth } from '../lib/store.svelte.js';
   import { slugify, migrateWorkspace } from '../lib/model.js';
+  import { inlineReplacer, deImageWorkspace } from '../lib/imagepool.js';
   import { buildWorkspace } from '../lib/build.js';
   import { download } from '../lib/download.js';
   import { dismissable } from '../lib/dismissable.js';
@@ -20,7 +21,8 @@
   }
 
   function saveJson(){
-    download(new Blob([JSON.stringify(app.ws)], { type: 'application/json' }), (slugify(app.ws.title) || 'world') + '.json');
+    // inline image refs back to data URLs so the backup file is self-contained / portable
+    download(new Blob([JSON.stringify(app.ws, inlineReplacer)], { type: 'application/json' }), (slugify(app.ws.title) || 'world') + '.json');
     clearDirty();
   }
   function openJson(e){
@@ -30,6 +32,7 @@
         const data = JSON.parse(txt);
         if (data && Array.isArray(data.projects)){
           app.ws = migrateWorkspace(data);
+          deImageWorkspace(app.ws);   // pull the file's inline images into the pool as refs
           app.projectId = data.projects[0]?.id || null;
           app.entryId = null; app.view = 'projects'; clearDirty(); saveNow();
         } else toast('That does not look like a workspace file.');

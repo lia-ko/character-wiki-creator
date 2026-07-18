@@ -2,6 +2,7 @@
   import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
   import { pickImages } from '../../lib/images.js';
   import { imgSrc, imgPos } from '../../lib/model.js';
+  import { resolveImg } from '../../lib/imagepool.js';
   let { entry, sec, variant = 'grid', mapStyle = false, aspect = '16/10' } = $props();
   const imgs = $derived(entry.data[sec.key]);
 
@@ -47,7 +48,7 @@
 {#if variant === 'sigil'}
   <div class="sigil">
     {#if imgs.length}
-      <div class="sq" style={`background-image:url(${imgSrc(imgs[0])})`}><button class="x" onclick={() => del(0)} title="remove">✕</button></div>
+      <div class="sq" style={`background-image:url(${resolveImg(imgSrc(imgs[0]))})`}><button class="x" onclick={() => del(0)} title="remove">✕</button></div>
     {:else}
       <button class="sq add" onclick={replace}><span>＋</span></button>
     {/if}
@@ -58,7 +59,7 @@
     <div class="primary" class:mapgrid={mapStyle} class:draggable={imgs.length} class:dragging
          bind:this={primaryEl}
          onpointerdown={imgs.length ? dragStart : null} onpointermove={dragMove} onpointerup={dragEnd} onpointercancel={dragEnd}
-         style={`aspect-ratio:${aspect}` + (imgs.length ? `;background-image:url(${imgSrc(imgs[cur])});background-position:${imgPos(imgs[cur])}` : '')}>
+         style={`aspect-ratio:${aspect}` + (imgs.length ? `;background-image:url(${resolveImg(imgSrc(imgs[cur]))});background-position:${imgPos(imgs[cur])}` : '')}>
       {#if mapStyle}<span class="maptag">Map</span>{/if}
       {#if imgs.length > 1}
         <button class="nav prev" onpointerdown={(e) => e.stopPropagation()} onclick={prev} title="previous">‹</button>
@@ -87,7 +88,7 @@
 {:else}
   <div class="gal">
     {#each imgs as src, i (i)}
-      <div class="thumb" style={`background-image:url(${imgSrc(src)});background-position:${imgPos(src)}`}><button class="x" onclick={() => del(i)} title="remove">✕</button></div>
+      <div class="thumb" style={`background-image:url(${resolveImg(imgSrc(src))});background-position:${imgPos(src)}`}><button class="x" onclick={() => del(i)} title="remove">✕</button></div>
     {/each}
     <button class="add" onclick={add}><span>＋</span><small>add image</small></button>
   </div>

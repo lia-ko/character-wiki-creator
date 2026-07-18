@@ -2,19 +2,18 @@
   import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
   import { uid } from '../../lib/model.js';
   import Reorder from '../Reorder.svelte';
+  import RichEditor from './RichEditor.svelte';
   let { entry, sec, others } = $props();
   const outline = $derived(entry.data[sec.key]);
 
-  function titleOf(id){ const o = others.find(x => x.id === id); return o ? (o.title || 'Untitled') : '⚠ missing'; }
+  function setText(beat, v){ beat.text = v; markDirty(); }
 
   function addAct(){ outline.acts.push({ id: uid(), title: 'New act', chapters: [] }); markDirty(); }
   async function delAct(ai){ const a = outline.acts[ai]; const has = (a.chapters && a.chapters.length) || (a.title && a.title !== 'New act'); if (!(await confirmDelete(has, a.title ? '“' + a.title + '” and its chapters' : 'this act'))) return; outline.acts.splice(ai, 1); markDirty(); }
   function addChapter(ai){ outline.acts[ai].chapters.push({ id: uid(), title: 'New chapter', beats: [] }); markDirty(); }
   async function delChapter(ai, ci){ const ch = outline.acts[ai].chapters[ci]; const has = (ch.beats && ch.beats.length) || (ch.title && ch.title !== 'New chapter'); if (!(await confirmDelete(has, ch.title ? '“' + ch.title + '” and its beats' : 'this chapter'))) return; outline.acts[ai].chapters.splice(ci, 1); markDirty(); }
-  function addBeat(ai, ci){ outline.acts[ai].chapters[ci].beats.push({ id: uid(), text: '', links: [] }); markDirty(); }
-  async function delBeat(ai, ci, bi){ const bt = outline.acts[ai].chapters[ci].beats[bi]; if (!(await confirmDelete(bt.text || (bt.links && bt.links.length), 'this beat'))) return; outline.acts[ai].chapters[ci].beats.splice(bi, 1); markDirty(); }
-  function addLink(beat, id){ if (id && !beat.links.includes(id)){ beat.links.push(id); markDirty(); } }
-  function delLink(beat, id){ beat.links = beat.links.filter(x => x !== id); markDirty(); }
+  function addBeat(ai, ci){ outline.acts[ai].chapters[ci].beats.push({ id: uid(), text: '' }); markDirty(); }
+  async function delBeat(ai, ci, bi){ const bt = outline.acts[ai].chapters[ci].beats[bi]; if (!(await confirmDelete(bt.text && bt.text.trim(), 'this beat'))) return; outline.acts[ai].chapters[ci].beats.splice(bi, 1); markDirty(); }
 </script>
 
 <div class="outline">
@@ -36,18 +35,7 @@
             <div class="beat">
               <span class="dot">•</span>
               <div class="beatmain">
-                <input class="beattext" bind:value={beat.text} oninput={markDirty} placeholder="beat — what happens" />
-                <div class="links">
-                  {#each beat.links as id}
-                    <button class="chip" onclick={() => delLink(beat, id)} title="unlink">{titleOf(id)} ✕</button>
-                  {/each}
-                  {#if others.length}
-                    <select class="addlink" value="" onchange={(e) => { addLink(beat, e.target.value); e.target.value=''; }}>
-                      <option value="">＋ link</option>
-                      {#each others as o}<option value={o.id}>{o.title || 'Untitled'} ({o.type})</option>{/each}
-                    </select>
-                  {/if}
-                </div>
+                <RichEditor value={beat.text} multiline placeholder="beat — what happens (type [[ to tag a character)" oninput={(v) => setText(beat, v)} />
               </div>
               <Reorder list={ch.beats} i={bi} />
               <button class="delx" onclick={() => delBeat(ai, ci, bi)} title="remove beat">✕</button>
@@ -71,13 +59,10 @@
   .chaphead{display:flex;align-items:center;gap:8px}
   .chaptitle{flex:1;background:none;border:none;outline:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
   .beat{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:start;padding:5px 0}
-  .dot{color:var(--accent-soft);line-height:1.8}
+  .dot{color:var(--accent-soft);line-height:1.6;padding-top:2px}
   .beatmain{min-width:0}
-  .beattext{width:100%;background:none;border:none;outline:none;font-family:var(--body);font-size:calc(.95rem*var(--bs,1));color:var(--ink)}
-  .links{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;align-items:center}
-  .chip{border:1px solid var(--rule);background:var(--panel-2);color:var(--muted);border-radius:20px;padding:2px 9px;font-family:var(--mono);font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-  .chip:hover{border-color:var(--accent);color:var(--ink)}
-  .addlink{background:none;border:1px dashed var(--rule);color:var(--faint);border-radius:20px;padding:2px 6px;font-family:var(--mono);font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  /* the beat body is a RichEditor: wraps, grows, supports paragraphs + inline [[ character tags */
+  .beatmain :global(.ce){font-size:calc(.95rem*var(--bs,1))}
   .delx{border:none;background:none;color:var(--faint);cursor:pointer;font-size:.85rem;padding:2px 6px;border-radius:4px}
   .delx:hover{color:#fff;background:var(--accent)}
   .addbtn{width:100%;margin-top:6px;border:1px dashed var(--rule);background:none;color:var(--muted);border-radius:8px;padding:9px;cursor:pointer;font-family:var(--sans);font-size:.8rem}

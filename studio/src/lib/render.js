@@ -7,6 +7,7 @@ import { esc, richToParas, richToLine } from './richtext.js';
 import { layoutFamily } from './familyLayout.js';
 import { templateFor, ENTRY_TYPES, FAMILIES } from './templates.js';
 import { coverOf, imgSrc, imgPos, bodySectionsOf } from './model.js';
+import { resolveImg } from './imagepool.js';
 import { paletteVars, palById, fontVars, fontFaceCSS } from './theme.js';
 import { embedUrl, embedHeight } from './spotify.js';
 import { ARC_C, arcMode, effectiveGeom, arcLine, arcArea } from './arc.js';
@@ -22,7 +23,7 @@ const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').re
 
 function galleryHTML(imgs){
   if (!imgs || !imgs.length) return '';
-  const slides = imgs.map((s, i) => `<div class="cslide${i === 0 ? ' on' : ''}"><img src="${esc(imgSrc(s))}" alt="" style="object-position:${esc(imgPos(s))}"></div>`).join('');
+  const slides = imgs.map((s, i) => `<div class="cslide${i === 0 ? ' on' : ''}"><img src="${esc(resolveImg(imgSrc(s)))}" alt="" style="object-position:${esc(imgPos(s))}"></div>`).join('');
   const nav = imgs.length > 1 ? `<div class="cnav"><button type="button" class="cbtn cprev">&lsaquo;</button><span class="ccount">1 / ${imgs.length}</span><button type="button" class="cbtn cnext">&rsaquo;</button></div>` : '';
   return `<div class="carousel"><div class="cstage" data-idx="0">${slides}</div>${nav}</div>`;
 }
@@ -34,7 +35,7 @@ function sectionsHTML(list, ctx){
   return (list || []).map(s => `<h3 id="${esc(slug(s.h))}">${esc(s.h || 'Section')}</h3>${richToParas(s.body, ctx)}`).join('');
 }
 function relName(r, ctx){ const nm = esc(r.name || '—'); const h = r.targetId && ctx.href(r.targetId); return h ? `<a href="${esc(h)}">${nm}</a>` : nm; }
-function relImg(r, ctx){ return r.img || (r.targetId && ctx.cover && ctx.cover(r.targetId)) || ''; }
+function relImg(r, ctx){ return resolveImg(r.img) || (r.targetId && ctx.cover && ctx.cover(r.targetId)) || ''; }
 
 function relationsHTML(list, sec, ctx){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
@@ -512,6 +513,28 @@ function lexiconHTML(list){
   }).join('');
   return cats ? `<div class="lex">${cats}</div>` : '<p class="empty">No terms yet.</p>';
 }
+// phrasebook: phrases grouped by category — each card is phrase · translation · literal gloss · usage note
+function phrasebookHTML(list){
+  if (!list || !list.length) return '<p class="empty">No phrases yet.</p>';
+  const order = [], groups = {};
+  for (const t of list){ const g = (t.group || '').trim(); if (!(g in groups)){ groups[g] = []; order.push(g); } groups[g].push(t); }
+  const card = (t) => {
+    const phrase = t.phrase && t.phrase.trim();
+    const trans = t.translation && t.translation.trim();
+    if (!phrase && !trans) return '';
+    const tr = trans ? `<div class="phtr">${esc(t.translation)}</div>` : '';
+    const lit = t.literal && t.literal.trim() ? `<div class="phlit"><span>lit.</span> ${esc(t.literal)}</div>` : '';
+    const use = t.usage && t.usage.trim() ? `<div class="phuse">${esc(t.usage)}</div>` : '';
+    return `<div class="phrase"><div class="phw">${esc(t.phrase || '—')}</div>${tr}${lit}${use}</div>`;
+  };
+  const cats = order.map(g => {
+    const cards = groups[g].map(card).join('');
+    if (!cards) return '';
+    const head = g ? `<h4 class="pbcat-h">${esc(g)}</h4>` : '';
+    return `<div class="pbcat">${head}<div class="pbgrid">${cards}</div></div>`;
+  }).join('');
+  return cats ? `<div class="phrasebook">${cats}</div>` : '<p class="empty">No phrases yet.</p>';
+}
 // definition list: term · value · optional source — serves Quick facts and Avoid (avoid variant)
 function deflistHTML(list, sec){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
@@ -560,10 +583,10 @@ function excerptsHTML(list, ctx){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
   return list.map((e, i) => `<details class="exc"${i === 0 ? ' open' : ''}><summary>${esc(e.title || 'Excerpt')}</summary><div class="eb">${richToParas(e.body, ctx)}${e.source ? `<div class="src">${esc(e.source)}</div>` : ''}</div></details>`).join('');
 }
-function outlineHTML(o){
+function outlineHTML(o, ctx){
   const acts = (o && o.acts) || [];
   if (!acts.length) return '<p class="empty">No structure yet.</p>';
-  return `<div class="outline">` + acts.map(a => `<div class="act"><div class="at">${esc(a.title || 'Act')}</div>` + (a.chapters || []).map(ch => `<div class="chap"><div class="ct">${esc(ch.title || 'Chapter')}</div>` + (ch.beats || []).map(bt => `<div class="beat"><span class="dot">•</span> ${esc(bt.text || '')}</div>`).join('') + `</div>`).join('') + `</div>`).join('') + `</div>`;
+  return `<div class="outline">` + acts.map(a => `<div class="act"><div class="at">${esc(a.title || 'Act')}</div>` + (a.chapters || []).map(ch => `<div class="chap"><div class="ct">${esc(ch.title || 'Chapter')}</div>` + (ch.beats || []).map(bt => `<div class="beat"><span class="dot">•</span><div class="btext">${richToParas(bt.text || '', ctx)}</div></div>`).join('') + `</div>`).join('') + `</div>`).join('') + `</div>`;
 }
 // history: a vertical, buildable timeline (era/date · title · description)
 function historyHTML(list, ctx){
@@ -687,12 +710,13 @@ function fieldHTML(entry, sec, ctx){
     case 'references': return referencesHTML(v);
     case 'deflist': return deflistHTML(v, sec);
     case 'lexicon': return lexiconHTML(v);
+    case 'phrasebook': return phrasebookHTML(v);
     case 'chronology': return chronologyHTML(v, ctx);
     case 'sourcenotes': return sourceNotesHTML(v, ctx);
     case 'ledger': return ledgerHTML(v);
     case 'taggroups': return tagsHTML(v, ctx);
     case 'excerpts': return excerptsHTML(v, ctx);
-    case 'outline': return outlineHTML(v);
+    case 'outline': return outlineHTML(v, ctx);
     case 'lineage': return lineageHTML(v, ctx);
     case 'familytree': return familyTreeHTML(v, ctx);
     case 'history': return historyHTML(v, ctx);
@@ -714,13 +738,15 @@ function fieldHTML(entry, sec, ctx){
 function twistsHTML(list, ctx){
   if (!Array.isArray(list)) return '';
   const STATUS = { idea: ['Idea', '#9aa1a8'], maybe: ['Maybe', '#c9a24a'], planted: ['Planted', '#5f8fb0'], used: ['Used', '#5aa06f'], cut: ['Cut', '#b0596a'] };
-  const cards = list.filter(r => (r.hook || r.setup || r.payoff || '').trim()).map((r, i) => {
+  const cards = list.filter(r => (r.hook || r.notes || r.setup || r.payoff || '').trim()).map((r, i) => {
     const st = STATUS[r.status] || STATUS.idea;
     const face = (label, val) => val && val.trim() ? `<div class="twface"><span class="twl">${label}</span><span>${esc(val)}</span></div>` : '';
+    // notes is the current free-form field; setup/payoff kept for entries written before the redesign
+    const body = r.notes && r.notes.trim() ? `<div class="twbody">${esc(r.notes)}</div>` : `${face('Setup', r.setup)}${face('Payoff', r.payoff)}`;
     const hinge = r.targetId && ctx.title && ctx.title(r.targetId);
     const href = r.targetId && ctx.href && ctx.href(r.targetId);
     const hingeHTML = hinge ? `<div class="twhinge">Hinges on ${href ? `<a href="${esc(href)}">${esc(hinge)}</a>` : esc(hinge)}</div>` : '';
-    return `<div class="twist${r.status === 'cut' ? ' cut' : ''}" style="--st:${st[1]}"><div class="twtop"><span class="twnum">${i + 1}</span><span class="twhook">${esc(r.hook || 'Untitled twist')}</span><span class="twbadge" style="color:${st[1]};border-color:${st[1]}">${esc(st[0])}</span></div>${face('Setup', r.setup)}${face('Payoff', r.payoff)}${hingeHTML}</div>`;
+    return `<div class="twist${r.status === 'cut' ? ' cut' : ''}" style="--st:${st[1]}"><div class="twtop"><span class="twnum">${i + 1}</span><span class="twhook">${esc(r.hook || 'Untitled twist')}</span><span class="twbadge" style="color:${st[1]};border-color:${st[1]}">${esc(st[0])}</span></div>${body}${hingeHTML}</div>`;
   }).join('');
   return cards ? `<div class="twists">${cards}</div>` : '';
 }
@@ -731,7 +757,7 @@ function npcRosterHTML(list, ctx){
   const cards = list.filter(r => (r.name || '').trim() || r.targetId).map(r => {
     const nm = r.name || (r.targetId && ctx.title && ctx.title(r.targetId)) || 'NPC';
     const href = r.targetId && ctx.href && ctx.href(r.targetId);
-    const cover = (r.targetId && ctx.cover && ctx.cover(r.targetId)) || r.img || '';
+    const cover = (r.targetId && ctx.cover && ctx.cover(r.targetId)) || resolveImg(r.img) || '';
     const port = cover ? `<span class="nport" style="background-image:url(${esc(cover)})"></span>` : `<span class="nport empty">${esc((nm || '?').slice(0, 1))}</span>`;
     const name = href ? `<a href="${esc(href)}">${esc(nm)}</a>` : esc(nm);
     const row = (k, v) => v && v.trim() ? `<div class="nrow"><span class="nk">${k}</span><span class="nv">${esc(v)}</span></div>` : '';
@@ -969,7 +995,7 @@ export function renderIndex(ws, ctx){
   const hrefs = ctx.hrefs || {};
   const cards = (ws.projects || []).map(p => {
     const es = p.entries || [];
-    let hero = p.cover || ''; if (!hero){ for (const e of es){ const c = coverOf(e); if (c){ hero = c; break; } } }
+    let hero = resolveImg(p.cover) || ''; if (!hero){ for (const e of es){ const c = coverOf(e); if (c){ hero = c; break; } } }
     const heroDiv = `<div class="phero"${hero ? ` style="background-image:url(${esc(hero)})"` : ''}>${!hero ? `<span class="pini">${esc((p.name || '?').slice(0, 2))}</span>` : ''}</div>`;
     return `<a class="pcard" href="${esc(hrefs[p.id] || '#')}">${heroDiv}<div class="pbody"><div class="pt">${esc(p.name || 'Project')}</div><div class="pmeta">${p.genre ? esc(p.genre) + ' · ' : ''}${es.length} entr${es.length === 1 ? 'y' : 'ies'}</div></div></a>`;
   }).join('');

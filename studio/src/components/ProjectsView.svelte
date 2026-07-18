@@ -1,6 +1,7 @@
 <script>
   import { app, openProject, addProject, deleteProject, markDirty, toast, undo, confirmModal } from '../lib/store.svelte.js';
   import { coverOf } from '../lib/model.js';
+  import { resolveImg } from '../lib/imagepool.js';
   import ThemeBar from './ThemeBar.svelte';
   import FontSample from './FontSample.svelte';
   import Reorder from './Reorder.svelte';
@@ -24,7 +25,7 @@
   <div class="grid">
     {#each app.ws.projects as p, pi (p.id)}
       {@const es = p.entries || []}
-      {@const hero = p.cover || heroCover(p)}
+      {@const hero = resolveImg(p.cover) || heroCover(p)}
       <div class="pcard" role="button" tabindex="0" aria-label={p.name || 'Untitled project'}
            onclick={() => openProject(p.id)}
            onkeydown={(ev) => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); openProject(p.id); } }}>

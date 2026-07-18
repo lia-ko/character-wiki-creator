@@ -1,6 +1,7 @@
 <script>
   import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
   import { uid, imgSrc } from '../../lib/model.js';
+  import { resolveImg } from '../../lib/imagepool.js';
   import { pickImages } from '../../lib/images.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
@@ -118,7 +119,7 @@
                 <div class="pcontent place-{n.placement || 'top'}">
                   <div class="pfig">
                     {#each (n.images || []) as im, ii (ii)}
-                      <div class="pthumb" style={`background-image:url(${imgSrc(im)})`}><button class="ix" onclick={() => delImg(n, ii)} title="remove image">✕</button></div>
+                      <div class="pthumb" style={`background-image:url(${resolveImg(imgSrc(im))})`}><button class="ix" onclick={() => delImg(n, ii)} title="remove image">✕</button></div>
                     {/each}
                     <button class="paddimg" onclick={() => addImg(n)}><span>＋</span><small>{(n.images || []).length ? 'add' : 'add image(s)'}</small></button>
                   </div>

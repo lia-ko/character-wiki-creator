@@ -1,6 +1,7 @@
 <script>
   import { markDirty, openEntry, confirmDelete } from '../../lib/store.svelte.js';
   import { pickImages } from '../../lib/images.js';
+  import { resolveImg } from '../../lib/imagepool.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
   let { entry, sec, others } = $props();
@@ -9,7 +10,7 @@
   const RAMP = ['var(--faint)', 'var(--faint)', '#3f9d6d', '#8a5a2b', '#9a3324'];
 
   const linkedOf = (r) => others.find(o => o.id === r.targetId);
-  const imgOf = (r) => r.img || linkedOf(r)?.cover || '';   // pull the linked entry's cover if none set
+  const imgOf = (r) => resolveImg(r.img) || linkedOf(r)?.cover || '';   // pull the linked entry's cover if none set
   const groups = $derived([...new Set(list.map(r => (r.group || '').trim()).filter(Boolean))]);
 
   let open = $state({ 0: true });

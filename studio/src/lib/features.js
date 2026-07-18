@@ -54,6 +54,7 @@ export const FEATURE_GROUPS = [
   { group: 'Reference', icon: '❏', color: '#7f9ac9', features: [
     { type: 'references', name: 'Bibliography', desc: 'Books, links, videos with reliability.', icon: '▤', sec: { label: 'References', slot: 'main' } },
     { type: 'lexicon', name: 'Lexicon', desc: 'Grouped term cards — pronunciation, usage.', icon: '¶', sec: { label: 'Lexicon', slot: 'main' } },
+    { type: 'phrasebook', name: 'Phrasebook', desc: 'Phrases → meaning — translation, literal gloss, usage.', icon: '❝', sec: { label: 'Phrasebook', slot: 'main' } },
     { type: 'ledger', name: 'Real vs invented', desc: 'A colour-keyed accuracy ledger.', icon: '⚖', sec: { label: 'Real vs invented', slot: 'main' } },
     { type: 'outline', name: 'Plot outline', desc: 'Acts → chapters → beats.', icon: '✎', sec: { label: 'Structure', slot: 'main' } },
     { type: 'sourcenotes', name: 'Reading notes', desc: 'Chapters → typed notes & plates (a reading log).', icon: '❏', sec: { label: 'Notes', slot: 'main' } },
