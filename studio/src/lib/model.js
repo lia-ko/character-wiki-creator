@@ -38,11 +38,14 @@ export function migrateWorkspace(ws){
   if (!Array.isArray(ws.typeLibrary)) ws.typeLibrary = [];   // the user's custom-type library
   // content width: focused | normal | full (migrate the retired 'wide' → 'normal')
   if (!ws.contentWidth || !['focused', 'normal', 'full'].includes(ws.contentWidth)) ws.contentWidth = 'normal';
-  (ws?.projects || []).forEach(p => {
+  if (!Array.isArray(ws.series)) ws.series = [];             // series = shared "bibles" that group books
+  (ws?.projects || []).forEach((p, i) => {
     if (p.portraitScale == null) p.portraitScale = 1;
     if (p.cover == null) p.cover = '';
     if (p.spotify == null) p.spotify = [];
     if (!Array.isArray(p.types)) p.types = [];               // imported copies of custom types
+    if (p.seriesId == null) p.seriesId = '';                 // '' = standalone (not in a series)
+    if (p.order == null) p.order = i;                        // reading order within its series
   });
   rebuildCustomTypes(ws);                                     // must precede ensureEntryData (custom types)
   (ws?.projects || []).forEach(p => {
@@ -51,6 +54,16 @@ export function migrateWorkspace(ws){
       ensureEntryData(e);
     });
     foldBeatLinks(p);   // outline beats: retire the old links[] chips into inline [[id|title]] mentions
+  });
+  (ws.series || []).forEach(s => {                            // bible sheets live at the series level
+    if (!Array.isArray(s.entries)) s.entries = [];
+    if (s.cover == null) s.cover = '';
+    if (s.genre == null) s.genre = '';
+    s.entries.forEach(e => {
+      if (!Array.isArray(e.books)) e.books = [];              // book ids this bible sheet appears in
+      if (TYPE_ALIASES[e.type]) e.type = TYPE_ALIASES[e.type];
+      ensureEntryData(e);
+    });
   });
   return ws;
 }
@@ -132,6 +145,7 @@ export function createProject(name, genre){
     id: uid(), name: name || 'New project', genre: genre || '',
     palette: 'slate', headFont: 'playfair-display', bodyFont: 'eb-garamond',
     headScale: 1, bodyScale: 1, portraitScale: 1, cover: '', spotify: [], entries: [], types: [],
+    seriesId: '', order: 0,   // '' seriesId = standalone; order = reading order within its series
   };
 }
 
@@ -141,8 +155,72 @@ export function createWorkspace(){
   return {
     title: 'Your World', palette: 'slate',
     headFont: 'playfair-display', bodyFont: 'eb-garamond', headScale: 1, bodyScale: 1,
-    projects: [p], trash: [], typeLibrary: [], contentWidth: 'normal',
+    projects: [p], series: [], trash: [], typeLibrary: [], contentWidth: 'normal',
   };
+}
+
+/* ---- series (shared "bible" that groups books) ----
+   A series holds shared bible entries (each tagged with the book ids it appears in) and groups
+   projects (= books) via project.seriesId. A book's effective entry pool = its own local entries
+   + the bible entries whose `books` include it. A standalone project has seriesId ''. */
+export function createSeries(name, genre){
+  return { id: uid(), name: name || 'New series', genre: genre || '', cover: '', entries: [] };
+}
+export function seriesById(ws, id){ return (ws.series || []).find(s => s.id === id) || null; }
+export function seriesOf(ws, project){ return project && project.seriesId ? seriesById(ws, project.seriesId) : null; }
+// books (projects) in a series, in reading order
+export function booksInSeries(ws, seriesId){
+  return (ws.projects || []).filter(p => p.seriesId === seriesId)
+    .sort((a, b) => (a.order | 0) - (b.order | 0) || String(a.name).localeCompare(String(b.name)));
+}
+// bible entries that appear in a given book
+export function bibleForBook(series, projectId){
+  return series ? (series.entries || []).filter(e => (e.books || []).includes(projectId)) : [];
+}
+// a book's effective entry pool: its own local entries + the bible entries used in it
+export function bookPool(ws, project){
+  return (project.entries || []).concat(bibleForBook(seriesOf(ws, project), project.id));
+}
+// which books (of the series) a bible entry is used in, as their book projects
+export function booksForBibleEntry(ws, series, entry){
+  const ids = new Set(entry.books || []);
+  return booksInSeries(ws, series.id).filter(p => ids.has(p.id));
+}
+// put a project into a series (or '' to make it standalone), appended after the series' last book
+export function setBookSeries(ws, projectId, seriesId){
+  const p = (ws.projects || []).find(x => x.id === projectId);
+  if (!p) return null;
+  p.seriesId = seriesId || '';
+  if (p.seriesId){
+    const others = (ws.projects || []).filter(x => x.seriesId === p.seriesId && x.id !== p.id);
+    p.order = others.length ? Math.max(...others.map(o => o.order | 0)) + 1 : 0;
+  }
+  return p;
+}
+// Move a local entry up into its series' bible (shared). Defaults membership to every book in
+// the series so it's visible everywhere at once. Returns the moved entry (or null).
+export function promoteToBible(ws, projectId, entryId){
+  const project = (ws.projects || []).find(p => p.id === projectId);
+  const series = project && seriesOf(ws, project);
+  if (!project || !series) return null;
+  const i = (project.entries || []).findIndex(e => e.id === entryId);
+  if (i === -1) return null;
+  const [entry] = project.entries.splice(i, 1);
+  entry.books = booksInSeries(ws, series.id).map(p => p.id);   // used in all books by default
+  series.entries.push(entry);
+  return entry;
+}
+// Move a bible entry back down into a specific book as a local entry (drops its membership).
+export function demoteToLocal(ws, seriesId, entryId, projectId){
+  const series = seriesById(ws, seriesId);
+  const project = (ws.projects || []).find(p => p.id === projectId);
+  if (!series || !project) return null;
+  const i = (series.entries || []).findIndex(e => e.id === entryId);
+  if (i === -1) return null;
+  const [entry] = series.entries.splice(i, 1);
+  delete entry.books;
+  project.entries.push(entry);
+  return entry;
 }
 
 /* ---- custom sheet types ----
@@ -207,10 +285,10 @@ function collectTargets(val, id, hits){
 
 // Reverse of the targetId links: every entry that points AT `entry`, with the section
 // + role it linked under. Powers the read-only "Linked from" backlinks block.
-export function backlinksFor(entry, project){
+export function backlinksFor(entry, project, entries){
   if (!entry || !project) return [];
   const out = [];
-  for (const src of (project.entries || [])){
+  for (const src of (entries || project.entries || [])){
     if (src.id === entry.id || !src.data) continue;
     const labelOf = {}; templateFor(src.type).sections.forEach(s => { labelOf[s.key] = s.label; });
     const seen = new Set();

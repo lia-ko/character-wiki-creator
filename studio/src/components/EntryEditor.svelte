@@ -3,7 +3,7 @@
   import { FEATURE_GROUPS } from '../lib/features.js';
   import { dismissable } from '../lib/dismissable.js';
   import { templateFor } from '../lib/templates.js';
-  import { coverOf, backlinksFor, ensureEntryData, bodySectionsOf } from '../lib/model.js';
+  import { coverOf, backlinksFor, ensureEntryData, bodySectionsOf, bookPool } from '../lib/model.js';
   import { suggestedSections } from '../lib/kinds.js';
   import { exportSingleEntry } from '../lib/exportentry.js';
 
@@ -19,8 +19,9 @@
 
   function previewEntry(){
     const p = curProject();
-    const ctx = baseCtx(p, readerMaps(p), { href: () => null, entry });
-    const html = docShell({ title: entry.title || 'Entry', palette: p.palette, headFont: p.headFont, bodyFont: p.bodyFont, headScale: p.headScale, bodyScale: p.bodyScale, portraitScale: p.portraitScale, fontPrefix: location.origin + '/fonts/', bodyHTML: renderEntry(entry, ctx) });
+    const pool = bookPool(app.ws, p);   // resolve links/covers across this book's local + bible sheets
+    const ctx = baseCtx(p, readerMaps(p, pool), { href: () => null, entry, entries: pool });
+    const html = docShell({ title: entry.title || 'Entry', palette: p.palette, headFont: p.headFont, bodyFont: p.bodyFont, headScale: p.headScale, bodyScale: p.bodyScale, portraitScale: p.portraitScale, contentWidth: app.ws.contentWidth, fontPrefix: location.origin + '/fonts/', bodyHTML: renderEntry(entry, ctx) });
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     window.open(url, '_blank');
     setTimeout(() => URL.revokeObjectURL(url), 6000);
@@ -58,7 +59,13 @@
   });
   // a sheet shown as a Top banner uses a feature image, except sigil sheets (house/org) which
   // keep their emblem-beside-title treatment
-  const heroMedia = $derived(tpl?.media === 'sigil' ? 'sigil' : 'feature');
+  const heroMedia = $derived(tpl?.media === 'sigil' ? 'sigil' : tpl?.media === 'duet' ? 'duet' : 'feature');
+  // duet hero (relationship): the header is built from the two people the dyad links to
+  const duetSec = $derived(tpl?.media === 'duet' ? (tpl.sections || []).find(s => s.type === 'dyad') : null);
+  const duet = $derived((duetSec && entry?.data?.[duetSec.key]) || {});
+  const duetOf = (s) => (others || []).find(o => o.id === duet[s]?.targetId);
+  const duetName = (s) => duetOf(s)?.title || '';
+  const duetCover = (s) => duetOf(s)?.cover || '';   // `others` covers are already resolved
   // outline templates (plot) support a 3-way image placement: top banner / side / right rail
   const mpos = $derived(entry?.mediaPos || 'top');
 
@@ -100,7 +107,7 @@
     for (const s of hiddenSecs){ const z = s.zone || (s.slot === 'aside' ? 'Infobox blocks' : 'More sections'); if (!byZone[z]){ byZone[z] = []; groups.push(z); } byZone[z].push(s); }
     return groups.map(z => ({ zone: z, secs: byZone[z] }));
   });
-  const backlinks = $derived(entry ? backlinksFor(entry, project) : []);
+  const backlinks = $derived(entry ? backlinksFor(entry, project, bookPool(app.ws, project)) : []);
   const navList = $derived(project ? orderedEntries(project) : []);
   const navIdx = $derived(navList.findIndex(e => e.id === entry?.id));
 
@@ -241,14 +248,17 @@
         {:else}
           <div class="secwrap" id="sec-{sec.key}" use:secRegister={sec.key}>
             <button class="seccol" onclick={() => toggleCollapse(sec.key)} title={collapsed.has(sec.key) ? 'expand' : 'collapse'} aria-label="collapse section">{collapsed.has(sec.key) ? '▸' : '▾'}</button>
-            <h2 class="sechd" onpointerdown={(e) => secDown(e, sec.key)} onpointermove={secMove} onpointerup={secUp} onpointercancel={secUp} title="drag to reorder"><span class="secgrip" aria-hidden="true">⠿</span>{sec.label}</h2>
+            <h2 class="sechd" onpointerdown={(e) => secDown(e, sec.key)} onpointermove={secMove} onpointerup={secUp} onpointercancel={secUp} title="drag to reorder"><span class="secgrip" aria-hidden="true">⠿</span>{sec.label}{#if sec.scale}<span class="secscale">Scale · {sec.scale}</span>{/if}</h2>
             <div class="seccc onhover">
               <button class="csmv" onclick={() => moveSection(entry, sec.key, -1)} title="move section up">▲</button>
               <button class="csmv" onclick={() => moveSection(entry, sec.key, 1)} title="move section down">▼</button>
               <button class="csx" onclick={() => hideSection(entry, sec)} title="remove section">✕</button>
             </div>
           </div>
-          {#if !collapsed.has(sec.key)}<Field {entry} {sec} {others} />{/if}
+          {#if !collapsed.has(sec.key)}
+            {#if sec.def}<p class="secdef">{sec.def}</p>{/if}
+            <Field {entry} {sec} {others} />
+          {/if}
         {/if}
       {/each}
       <div class="addsec" use:dismissable={() => secMenu = false}>
@@ -303,6 +313,8 @@
       </div>
     {/snippet}
 
+    {#snippet heroTitleSnip()}<EntryTitle {entry} {tpl} />{/snippet}
+
     <!-- ============ OUTLINE (plot) ============ -->
     {#if layout === 'outline'}
       {#if tpl.mediaPlace && gallerySec && mpos === 'side'}
@@ -333,11 +345,11 @@
     {:else if layout === 'split'}
       <div class="wsplit">
         <div class="media">
-          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect={layout === 'split' ? '3/4' : '16/10'} />{/if}
+          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect="3/4" />{/if}
+          {#if statsSec}<Stats {entry} sec={statsSec} />{/if}
         </div>
         <div class="col">
           <EntryTitle {entry} {tpl} />
-          {#if statsSec}<div class="blk-h">{statsSec.label}</div><Stats {entry} sec={statsSec} />{/if}
           {@render bodyList()}
         </div>
       </div>
@@ -350,12 +362,35 @@
             {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="sigil" />{/if}
             <EntryTitle {entry} {tpl} />
           </div>
+        {:else if heroMedia === 'duet'}
+          <!-- the pairing is the header: both linked people's own covers, either side of the title -->
+          <div class="duet spined">
+            {#each ['a', 'b'] as s}
+              {#if s === 'b'}
+                <div class="dlock">
+                  <EntryTitle {entry} {tpl} />
+                  {#if duet.status || duet.dynamic}
+                    <div class="dpills">
+                      {#if duet.status}<span class="dpill live">{duet.status}</span>{/if}
+                      {#if duet.dynamic}<span class="dpill">{duet.dynamic}</span>{/if}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+              <div class="dport {s}" style={duetCover(s) ? `background-image:url(${duetCover(s)})` : ''}>
+                {#if !duetCover(s)}<span class="dpini">{(duetName(s) || '?').slice(0, 1)}</span>{/if}
+                <span class="dpnm"><b>{duetName(s) || (s === 'a' ? 'Person A' : 'Person B')}</b>
+                  {#if duet[s]?.role}<i>{duet[s].role}</i>{/if}</span>
+              </div>
+            {/each}
+          </div>
+        {:else if gallerySec}
+          <Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect="16/7" overlay={heroTitleSnip} />
         {:else}
           <EntryTitle {entry} {tpl} />
-          {#if gallerySec}<Gallery {entry} sec={gallerySec} variant="feature" mapStyle={tpl.mapStyle} aspect="16/10" />{/if}
         {/if}
 
-        {#if statsSec}<div class="blk-h">{statsSec.label}</div><Stats {entry} sec={statsSec} />{/if}
+        {#if statsSec}<Stats {entry} sec={statsSec} />{/if}
 
         {@render bodyList()}
       </div>
@@ -489,7 +524,11 @@
   .secwrap>.seccol{position:absolute;left:-24px;top:19px}
   /* drag-to-reorder: the heading itself is the drag handle (template sections);
      custom-heading sections use the inline grip button before the input */
-  .sechd{cursor:grab}
+  .sechd{cursor:grab;font-family:var(--mono);font-weight:600;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:26px 0 12px;padding-bottom:0;border-bottom:none;display:flex;align-items:center}
+  /* mirrors the reader: scale pill beside the label, then the rule runs to the edge */
+  .secscale{flex:none;margin-left:12px;font-family:var(--mono);font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);border:1px solid var(--rule);border-radius:20px;padding:3px 10px;white-space:nowrap}
+  .secdef{color:var(--muted);font-size:.92rem;line-height:1.6;margin:-2px 0 14px;border-left:2px solid var(--rule);padding-left:14px;font-style:italic}
+  .sechd::after{content:"";flex:1;height:1px;background:var(--rule);margin-left:12px}
   .sechd:active{cursor:grabbing}
   .secgrip{color:var(--faint);font-size:.72em;letter-spacing:-2px;margin-right:9px;opacity:0;transition:opacity .12s;vertical-align:middle}
   .secwrap:hover .sechd .secgrip{opacity:.85}
@@ -547,11 +586,39 @@
 
   /* split (character, item) */
   .wsplit{max-width:calc(1160px * var(--cw,1));margin:0 auto;padding:28px 30px 90px;display:grid;grid-template-columns:minmax(180px,calc(340px * var(--ps,1))) 1fr;gap:36px;align-items:start}
-  .wsplit .media{position:sticky;top:calc(var(--appbar-h) + 52px)}
+  .wsplit .media{position:sticky;top:calc(var(--appbar-h) + 52px);display:flex;flex-direction:column;gap:14px}
   .wsplit .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 
   /* hero (house, org, realm, location, event) */
   .whero{max-width:calc(900px * var(--cw,1));margin:0 auto;padding:28px 26px 90px;display:flex;flex-direction:column;gap:14px}
+  /* duet hero (relationship) — mirrors the reader; a duet needs room for two portraits */
+  .whero:has(.duet){max-width:calc(1080px * var(--cw,1))}
+  .duet{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:30px;position:relative}
+  .duet::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;z-index:0;transform:translateX(-.5px);
+    background:linear-gradient(180deg,transparent,var(--rule) 8%,var(--rule) 92%,transparent)}
+  .dport{position:relative;width:min(210px,100%);aspect-ratio:4/5;border-radius:14px;overflow:hidden;
+    border:1px solid var(--rule);background:var(--panel-2) center/cover no-repeat}
+  .dport.a{justify-self:end;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pa,#5f9fb0) 30%,transparent)}
+  .dport.b{justify-self:start;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pb,#d98d82) 30%,transparent)}
+  .dport::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,.86))}
+  .dpini{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--head);
+    font-size:3rem;color:var(--faint)}
+  .dpnm{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:13px 14px}
+  .dpnm b{display:block;font-family:var(--head);font-weight:400;font-size:calc(1.08rem*var(--hs,1));line-height:1.1;color:#fff}
+  .dpnm i{display:block;font-family:var(--mono);font-style:normal;font-size:.54rem;letter-spacing:.12em;
+    text-transform:uppercase;margin-top:5px}
+  .dport.a .dpnm i{color:var(--pa,#5f9fb0)} .dport.b .dpnm i{color:var(--pb,#d98d82)}
+  .dlock{position:relative;z-index:1;text-align:center;min-width:0}
+  .dlock :global(.et){align-items:center;text-align:center}
+  .dpills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .dpill{font-family:var(--mono);font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;
+    border:1px solid var(--rule);border-radius:20px;padding:4px 11px;color:var(--muted)}
+  .dpill.live{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 40%,transparent)}
+  @media(max-width:820px){
+    .duet{grid-template-columns:1fr;gap:18px}
+    .duet::before{display:none}
+    .dport{justify-self:center!important;width:min(170px,60%)}
+  }
   .herohead{display:flex;gap:18px;align-items:center}
 
   /* infobox (lore) */

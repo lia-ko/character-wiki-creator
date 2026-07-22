@@ -6,9 +6,9 @@
 import { coverOf, backlinksFor, projectEvents } from './model.js';
 
 // Build the per-project lookups ONCE, then reuse across every entry in that project.
-export function readerMaps(project){
+export function readerMaps(project, entries){
   const cover = {}, title = {}, meta = {};
-  (project.entries || []).forEach(e => {
+  (entries || project.entries || []).forEach(e => {
     cover[e.id] = coverOf(e); title[e.id] = e.title;
     meta[e.id] = { type: e.type, subtitle: e.subtitle || '', summary: (e.data && e.data.summary) || '' };
   });
@@ -17,7 +17,7 @@ export function readerMaps(project){
 
 // Assemble a ctx from prebuilt maps. `project` is the real project (for backlinks); pass
 // `sidebarProject` (+ currentId) to render the nav shell scoped to that set.
-export function baseCtx(project, maps, { href, hubHref = null, currentId = null, sidebarProject = null, entry = null } = {}){
+export function baseCtx(project, maps, { href, hubHref = null, currentId = null, sidebarProject = null, entry = null, entries = null } = {}){
   const ctx = {
     href: href || (() => null),
     cover: (id) => maps.cover[id] || null,
@@ -27,7 +27,7 @@ export function baseCtx(project, maps, { href, hubHref = null, currentId = null,
     hubHref,
     crumb: project.name,
   };
-  if (entry) ctx.backlinks = backlinksFor(entry, project);
+  if (entry) ctx.backlinks = backlinksFor(entry, project, entries || project.entries);
   if (sidebarProject){ ctx.project = sidebarProject; if (currentId) ctx.currentId = currentId; }
   return ctx;
 }

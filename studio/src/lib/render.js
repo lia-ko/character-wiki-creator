@@ -24,7 +24,9 @@ const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').re
 function galleryHTML(imgs){
   if (!imgs || !imgs.length) return '';
   const slides = imgs.map((s, i) => `<div class="cslide${i === 0 ? ' on' : ''}"><img src="${esc(resolveImg(imgSrc(s)))}" alt="" style="object-position:${esc(imgPos(s))}"></div>`).join('');
-  const nav = imgs.length > 1 ? `<div class="cnav"><button type="button" class="cbtn cprev">&lsaquo;</button><span class="ccount">1 / ${imgs.length}</span><button type="button" class="cbtn cnext">&rsaquo;</button></div>` : '';
+  const nav = imgs.length > 1
+    ? `<button type="button" class="cbtn cprev" aria-label="previous image">&lsaquo;</button><button type="button" class="cbtn cnext" aria-label="next image">&rsaquo;</button><span class="ccount">1 / ${imgs.length}</span><span class="cdots">${imgs.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</span>`
+    : '';
   return `<div class="carousel"><div class="cstage" data-idx="0">${slides}</div>${nav}</div>`;
 }
 function statsHTML(rows){
@@ -37,43 +39,71 @@ function sectionsHTML(list, ctx){
 function relName(r, ctx){ const nm = esc(r.name || '—'); const h = r.targetId && ctx.href(r.targetId); return h ? `<a href="${esc(h)}">${nm}</a>` : nm; }
 function relImg(r, ctx){ return resolveImg(r.img) || (r.targetId && ctx.cover && ctx.cover(r.targetId)) || ''; }
 
+// relations render as a master–detail side pane: a list of ties on the left; clicking one
+// shows its portrait + write-up (+ a link to the linked sheet) in the detail panel on the right.
 function relationsHTML(list, sec, ctx){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
-  return `<div class="rels">` + list.map((r, i) => {
+  const items = list.map((r, i) => {
     const img = relImg(r, ctx);
-    const thumb = `<span class="rthumb"${img ? ` style="background-image:url(${esc(img)})"` : ''}></span>`;
-    const port = `<div class="rport"${img ? ` style="background-image:url(${esc(img)})"` : ''}></div>`;
     const meta = esc([r.role, r.status].filter(Boolean).join(' · '));
-    return `<details class="rel"${i === 0 ? ' open' : ''}><summary>${thumb}<span class="rwho"><span class="rnm">${relName(r, ctx)}</span>${meta ? `<span class="rmeta">${meta}</span>` : ''}</span><span class="chev"></span></summary><div class="rbody">${port}<div class="rtxt">${richToParas(r.body, ctx)}</div></div></details>`;
-  }).join('') + `</div>`;
+    return `<button type="button" class="reli${i === 0 ? ' on' : ''}" data-i="${i}"><span class="rethumb"${img ? ` style="background-image:url(${esc(img)})"` : ''}></span><span class="rewho"><span class="rn">${esc(r.name || '—')}</span>${meta ? `<span class="rr">${meta}</span>` : ''}</span></button>`;
+  }).join('');
+  const panels = list.map((r, i) => {
+    const img = relImg(r, ctx);
+    const meta = esc([r.role, r.status].filter(Boolean).join(' · '));
+    const link = r.targetId && ctx.href && ctx.href(r.targetId);
+    return `<div class="repanel${i === 0 ? ' on' : ''}" data-i="${i}"><div class="report"${img ? ` style="background-image:url(${esc(img)})"` : ''}></div><div class="remain">${meta ? `<div class="rer">${meta}</div>` : ''}<div class="ren">${relName(r, ctx)}</div><div class="reb">${richToParas(r.body, ctx)}</div>${link ? `<a class="reopen" href="${esc(link)}">Open ${esc(r.name || 'sheet')} &rarr;</a>` : ''}</div></div>`;
+  }).join('');
+  return `<div class="relmd"><div class="rellist">${items}</div><div class="reldetail">${panels}</div></div>`;
 }
-// scale badge: `level` pips (0–4) on a rarity ramp + a free-text label
+// scale badge: `level` pips (0–4) on a rarity ramp + a free-text label.
+// A section may pin a single ramp colour instead (`sec.ramp`) — used where the scale means one
+// thing throughout (Conviction → gold, Observance → accent) rather than rarity-by-level. A pinned
+// ramp also stacks the label above the pips (the Editorial Ledger badge); the default stays inline.
 const BADGE_RAMP = ['var(--faint)', 'var(--faint)', '#3f9d6d', '#8a5a2b', '#9a3324'];
-function badgeHTML(level, label){
+const RAMP_COLOR = { gold: 'var(--gold)', accent: 'var(--accent-soft)' };
+function badgeHTML(level, label, ramp){
   const lv = Math.max(0, Math.min(4, level | 0));
   const has = label && String(label).trim();
   if (!lv && !has) return '';
-  const pips = [0, 1, 2, 3].map(i => `<i class="pip${i < lv ? ' on' : ''}"></i>`).join('');
-  return `<span class="fgbadge" style="--bc:${BADGE_RAMP[lv] || 'var(--faint)'}"><span class="pips">${pips}</span>${has ? `<span class="blabel">${esc(label)}</span>` : ''}</span>`;
+  const top = lv === 4 && ramp === 'accent';   // the max pip on the accent ramp glows
+  const pips = [0, 1, 2, 3].map(i => `<i class="pip${i < lv ? ' on' : ''}${top && i === 3 ? ' max' : ''}"></i>`).join('');
+  const color = RAMP_COLOR[ramp] || BADGE_RAMP[lv] || 'var(--faint)';
+  const lb = has ? `<span class="blabel">${esc(label)}</span>` : '';
+  const pw = `<span class="pips">${pips}</span>`;
+  // pinned ramp → label above pips; default ramp keeps the original pips-then-label inline order
+  return `<span class="fgbadge${ramp ? ' stacked' : ''}" style="--bc:${color}">${ramp ? lb + pw : pw + lb}</span>`;
 }
 // field-guide catalog: cards grouped by `group`, each with a scale badge + link-out
-function catalogHTML(list, ctx){
+function catalogHTML(list, ctx, sec){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
   const order = [], groups = {};
   for (const it of list){ const g = (it.group || '').trim(); if (!(g in groups)){ groups[g] = []; order.push(g); } groups[g].push(it); }
+  const whyLabel = (sec && sec.whyLabel) || 'Why';
+  const costLabel = (sec && sec.costLabel) || 'Break it and…';
+  const ramp = sec && sec.ramp;
   const card = (r) => {
     const img = relImg(r, ctx);
     const link = r.targetId && ctx.href(r.targetId);
+    // meta chips: free key/value pairs (When / Who / Marks…) kept per item
+    const meta = (r.meta || []).filter(m => m && (m.k || m.v));
+    const chips = meta.length
+      ? `<div class="fgmeta">${meta.map(m => `<span class="fgchip">${m.k ? `<b>${esc(m.k)}</b> ` : ''}${esc(m.v || '')}</span>`).join('')}</div>`
+      : '';
     return `<article class="fgc">`
-      + `<div class="fgthumb"${img ? ` style="background-image:url(${esc(img)})"` : ''}></div>`
-      + `<div class="fgbody"><div class="fgtop"><span class="fgname">${relName(r, ctx)}</span>${badgeHTML(r.level, r.badge)}</div>`
+      // the thumb is a real image band, not a placeholder — text-only catalogs skip it entirely
+      + (img ? `<div class="fgthumb" style="background-image:url(${esc(img)})"></div>` : '')
+      + `<div class="fgbody"><div class="fgtop"><span class="fgname">${relName(r, ctx)}</span>${badgeHTML(r.level, r.badge, ramp)}</div>`
       + (r.kind ? `<div class="fgkind">${esc(r.kind)}</div>` : '')
       + `<div class="fgdesc">${richToParas(r.body, ctx)}</div>`
+      + (r.why && String(r.why).trim() ? `<div class="fgwhy"><b>${esc(r.whyLabel || whyLabel)}</b>${richToParas(r.why, ctx)}</div>` : '')
+      + chips
+      + (r.cost && String(r.cost).trim() ? `<div class="fgcost"><b>${esc(costLabel)}</b>${richToParas(r.cost, ctx)}</div>` : '')
       + (link ? `<a class="fglink" href="${esc(link)}">Open entry &rarr;</a>` : '')
       + `</div></article>`;
   };
   return order.map(g => {
-    const head = g ? `<h3 class="fggh">${esc(g)} <span class="fgct">${groups[g].length}</span></h3>` : '';
+    const head = g ? `<h3 class="fggh">${esc(g)}</h3>` : '';
     return `<div class="fggroup">${head}<div class="fggrid">${groups[g].map(card).join('')}</div></div>`;
   }).join('');
 }
@@ -236,6 +266,29 @@ function arcHTML(v, ctx, sec){
   const forces = forceHTML.trim() ? `<div class="aforces">${forceHTML}</div>` : '';
   return `<div class="arcbox"><div class="arcchart"><span class="aax top" style="color:${g.top}">${esc(cfg.axisTop)}</span><span class="aax bot" style="color:${g.bottom}">${esc(cfg.axisBottom)}</span>${svg}</div>${caps}${forces}</div>`;
 }
+// duet hero — the pairing itself is the header: the two linked people's own covers face each
+// other across the spine, with the title lockup between them. Falls back to the plain title
+// when neither side is linked yet, so a blank sheet never shows two empty tiles.
+function duetHeadHTML(entry, tpl, title, ctx){
+  const tplSec = (tpl.sections || []).find(s => s.type === 'dyad');
+  const d = (tplSec && entry.data && entry.data[tplSec.key]) || {};
+  const a = d.a || {}, b = d.b || {};
+  if (!a.targetId && !b.targetId) return title;
+  const side = (p, s) => {
+    const nm = (ctx.title && ctx.title(p.targetId)) || '';
+    const cover = p.targetId && ctx.cover && ctx.cover(p.targetId);
+    const href = p.targetId && ctx.href && ctx.href(p.targetId);
+    const inner = `${cover ? '' : `<span class="dpini">${esc((nm || '?').slice(0, 1))}</span>`}`
+      + `<span class="dpnm"><b>${esc(nm || (s === 'a' ? 'Person A' : 'Person B'))}</b>${p.role ? `<i>${esc(p.role)}</i>` : ''}</span>`;
+    const st = cover ? ` style="background-image:url(${esc(cover)})"` : '';
+    return href
+      ? `<a class="dport ${s}"${st} href="${esc(href)}">${inner}</a>`
+      : `<div class="dport ${s}"${st}>${inner}</div>`;
+  };
+  const pills = [d.status, d.dynamic].filter(x => x && String(x).trim())
+    .map((x, i) => `<span class="dpill${i === 0 ? ' live' : ''}">${esc(x)}</span>`).join('');
+  return `<div class="duet spined">${side(a, 'a')}<div class="dlock">${title}${pills ? `<div class="dpills">${pills}</div>` : ''}</div>${side(b, 'b')}</div>`;
+}
 // relationship dyad — pairing header + central tension + mirrored his/her columns
 function dyadHTML(v, ctx){
   if (!v || typeof v !== 'object') return '';
@@ -243,26 +296,24 @@ function dyadHTML(v, ctx){
   const anyText = [v.dynamic, v.status, v.tension, a.role, b.role, sa.wants, sa.fears, sa.hides, sa.sees, sb.wants, sb.fears, sb.hides, sb.sees].some(x => x && String(x).trim());
   if (!a.targetId && !b.targetId && !anyText) return '';
   const nameOf = (id) => (ctx.title && ctx.title(id)) || '';
-  const who = (p, side) => {
-    const nm = nameOf(p.targetId);
-    const cover = p.targetId && ctx.cover && ctx.cover(p.targetId);
-    const href = p.targetId && ctx.href && ctx.href(p.targetId);
-    const av = cover ? `<span class="dav" style="background-image:url(${esc(cover)})"></span>` : `<span class="dav empty">${esc((nm || '?').slice(0, 1))}</span>`;
-    const label = nm ? (href ? `<a href="${esc(href)}">${esc(nm)}</a>` : esc(nm)) : (side === 'a' ? 'Person A' : 'Person B');
-    return `<div class="dwho ${side}">${av}<span class="dwm"><span class="dnm">${label}</span>${p.role ? `<span class="drl">${esc(p.role)}</span>` : ''}</span></div>`;
-  };
-  const bond = `<div class="dbond"><span class="dlink">↔</span>${v.dynamic ? `<span class="ddyn">${esc(v.dynamic)}</span>` : ''}${v.status ? `<span class="dstatus">${esc(v.status)}</span>` : ''}</div>`;
-  const head = `<div class="dhead">${who(a, 'a')}${bond}${who(b, 'b')}</div>`;
+  // the pairing header lives in the duet hero now; this widget is the tension and the gap
   const tension = v.tension && v.tension.trim() ? `<div class="dtension"><div class="dtl">The tension</div><p>${esc(v.tension)}</p></div>` : '';
   const ROWS = [['wants', 'Wants from them'], ['fears', 'Fears'], ['hides', 'Won’t admit'], ['sees', 'Sees them as']];
-  const sideHTML = (p, s, side) => {
-    const rows = ROWS.filter(([k]) => s[k] && s[k].trim()).map(([k, lbl]) => `<div class="drow"><div class="dk">${lbl}</div><div class="dv">${esc(s[k])}</div></div>`).join('');
-    if (!rows && !p.targetId) return '';
-    return `<div class="dside ${side}"><div class="dsh">${esc(nameOf(p.targetId) || (side === 'a' ? 'Person A' : 'Person B'))}<span>· their side</span></div>${rows}</div>`;
-  };
-  const sa2 = sideHTML(a, sa, 'a'), sb2 = sideHTML(b, sb, 'b');
-  const sides = (sa2 || sb2) ? `<div class="dsides">${sa2}${sb2}</div>` : '';
-  return `<div class="dyad">${head}${tension}${sides}</div>`;
+  const clash = v.clash || {};
+  const na = nameOf(a.targetId) || 'Person A', nb = nameOf(b.targetId) || 'Person B';
+  // mirrored ledger: label in the centre, one side's answer either way, so the asymmetry between
+  // the two people reads across rather than being held in the reader's head between two lists
+  const rows = ROWS.filter(([k]) => (sa[k] && sa[k].trim()) || (sb[k] && sb[k].trim())).map(([k, lbl]) => {
+    const cell = (s, side, nm) => s[k] && s[k].trim()
+      ? `<div class="gc ${side}"><span class="gwho">${esc(nm)}</span>${esc(s[k])}</div>`
+      : `<div class="gc ${side} empty"><span class="gwho">${esc(nm)}</span>—</div>`;
+    return `<div class="gaprow">${cell(sa, 'a', na)}<div class="gk${clash[k] ? ' clash' : ''}">${lbl}</div>${cell(sb, 'b', nb)}</div>`;
+  }).join('');
+  const gap = rows
+    ? `<div class="gap spined"><div class="ghd"><div class="gh a">${esc(na)}</div><div class="gh mid">reads across &rarr;</div><div class="gh b">${esc(nb)}</div></div>${rows}</div>`
+    : '';
+  if (!tension && !gap) return '';
+  return `<div class="dyad">${tension}${gap}</div>`;
 }
 // two-column dialectic (Theme statement↔counter, Setting then→now)
 function dialecticHTML(v, sec){
@@ -576,12 +627,18 @@ function tagsHTML(cats, ctx){
     const chips = (c.items || []).map(t => t.note && String(t.note).trim()
       ? `<details class="chip"><summary>${esc(t.name)}</summary><div class="note">${richToParas(t.note, ctx)}</div></details>`
       : `<span class="chip static">${esc(t.name)}</span>`).join('');
-    return `<div class="tcat"><h4>${esc(c.name || 'Category')}</h4><div class="chips">${chips}</div></div>`;
+    // a category can be marked as the negative side of the pair (taboos, prohibitions) and reads red
+    return `<div class="tcat"><h4>${esc(c.name || 'Category')}</h4><div class="chips${c.tone === 'taboo' ? ' taboo' : ''}">${chips}</div></div>`;
   }).join('');
 }
+// excerpts read as pull-quotes, not collapsibles — a saying you have to click open isn't a saying.
+// The title and source both fall to the cite line so neither is lost.
 function excerptsHTML(list, ctx){
   if (!list || !list.length) return '<p class="empty">Nothing here yet.</p>';
-  return list.map((e, i) => `<details class="exc"${i === 0 ? ' open' : ''}><summary>${esc(e.title || 'Excerpt')}</summary><div class="eb">${richToParas(e.body, ctx)}${e.source ? `<div class="src">${esc(e.source)}</div>` : ''}</div></details>`).join('');
+  return list.map(e => {
+    const cite = [e.title, e.source].filter(x => x && String(x).trim()).map(esc).join(' &middot; ');
+    return `<figure class="exc"><blockquote>${richToParas(e.body, ctx)}</blockquote>${cite ? `<figcaption>${cite}</figcaption>` : ''}</figure>`;
+  }).join('');
 }
 function outlineHTML(o, ctx){
   const acts = (o && o.acts) || [];
@@ -589,8 +646,20 @@ function outlineHTML(o, ctx){
   return `<div class="outline">` + acts.map(a => `<div class="act"><div class="at">${esc(a.title || 'Act')}</div>` + (a.chapters || []).map(ch => `<div class="chap"><div class="ct">${esc(ch.title || 'Chapter')}</div>` + (ch.beats || []).map(bt => `<div class="beat"><span class="dot">•</span><div class="btext">${richToParas(bt.text || '', ctx)}</div></div>`).join('') + `</div>`).join('') + `</div>`).join('') + `</div>`;
 }
 // history: a vertical, buildable timeline (era/date · title · description)
-function historyHTML(list, ctx){
+function historyHTML(list, sec, ctx){
   if (!list || !list.length) return '<p class="empty">No history yet.</p>';
+  // `sided` sections (a relationship's key moments) alternate beats across a central spine by
+  // whose move each was; everything else keeps the plain single-column timeline.
+  if (sec && sec.sided){
+    const rows = list.map(r => {
+      if (!(r.date && r.date.trim()) && !(r.title && r.title.trim()) && !(r.body && r.body.trim())) return '';
+      const s = r.side === 'a' || r.side === 'b' ? r.side : 'both';
+      // namespaced: `.beat` is already the plot/outline story beat
+      return `<div class="relbeat ${s}"><div class="rbcard">${r.date ? `<div class="rbdate">${esc(r.date)}</div>` : ''}`
+        + `${r.title ? `<h4>${esc(r.title)}</h4>` : ''}${richToParas(r.body, ctx)}</div><div class="rbnode"><span></span></div></div>`;
+    }).join('');
+    return rows ? `<div class="relbeats spined">${rows}</div>` : '<p class="empty">No history yet.</p>';
+  }
   const rows = list.map(r => {
     if (!(r.date && r.date.trim()) && !(r.title && r.title.trim()) && !(r.body && r.body.trim())) return '';
     return `<div class="vnode${r.key ? ' key' : ''}"><div class="vdate">${esc(r.date || '—')}</div><div class="vb">${r.title ? `<h4>${esc(r.title)}</h4>` : ''}${richToParas(r.body, ctx)}</div></div>`;
@@ -690,7 +759,7 @@ function fieldHTML(entry, sec, ctx){
     case 'gallery': return galleryHTML(v);
     case 'richsections': return sectionsHTML(v, ctx);
     case 'relations': return relationsHTML(v, sec, ctx);
-    case 'catalog': return catalogHTML(v, ctx);
+    case 'catalog': return catalogHTML(v, ctx, sec);
     case 'meter': return meterHTML(v, sec);
     case 'kind': return kindHTML(v);
     case 'gauges': return gaugesHTML(v);
@@ -719,7 +788,7 @@ function fieldHTML(entry, sec, ctx){
     case 'outline': return outlineHTML(v, ctx);
     case 'lineage': return lineageHTML(v, ctx);
     case 'familytree': return familyTreeHTML(v, ctx);
-    case 'history': return historyHTML(v, ctx);
+    case 'history': return historyHTML(v, sec, ctx);
     case 'ties': return tiesHTML(v, sec, ctx);
     case 'allegianceweb': return webHTML(v, entry, ctx);
     case 'eventtimeline': return timelineHTML(entry, ctx);
@@ -869,7 +938,14 @@ function sidenavHTML(project, ctx){
 const NAV_TOGGLE = `<button class="navtoggle" data-navtoggle aria-label="Toggle navigation">☰</button>`;
 const shell = (nav, content) => `<div class="shell">${nav}<button class="navback" data-navtoggle aria-label="Close navigation"></button><div class="content">${content}</div></div>`;
 
-const heading = (sec, inner) => (sec.lead || sec.type === 'meter') ? inner : `<h2 id="${esc(slug(sec.label))}">${esc(sec.label)}</h2>${inner}`;
+// section heading: the label, optionally badged with the scale its items are rated on
+// (so the reader knows what the pips mean) and followed by a definition line explaining the section.
+const heading = (sec, inner) => {
+  if (sec.lead || sec.type === 'meter') return inner;
+  const tag = sec.scale ? `<span class="stag">Scale &middot; ${esc(sec.scale)}</span>` : '';
+  const def = sec.def ? `<p class="sdef">${esc(sec.def)}</p>` : '';
+  return `<div class="shead"><h2 id="${esc(slug(sec.label))}">${esc(sec.label)}</h2>${tag}</div>${def}${inner}`;
+};
 
 // read-only reverse links: "who points at this entry" (ctx.backlinks precomputed by the caller)
 function backlinksHTML(backlinks, ctx){
@@ -925,7 +1001,7 @@ export function renderEntry(entry, ctx){
   }
   body += backlinksHTML(ctx.backlinks, ctx);
   const bandsHTML = bandInner ? `<div class="bands">${bandInner}</div>` : '';
-  const title = `<div class="etitle"><h1>${esc(entry.title || 'Untitled')}</h1>${entry.subtitle ? (tpl.motto ? `<div class="words"><span>${esc(entry.subtitle)}</span></div>` : `<div class="esub">${esc(entry.subtitle)}</div>`) : ''}</div>`;
+  const title = `<div class="etitle"><div class="ekick">${esc(tpl.label)}</div><h1>${esc(entry.title || 'Untitled')}</h1>${entry.subtitle ? (tpl.motto ? `<div class="words"><span>${esc(entry.subtitle)}</span></div>` : `<div class="esub">${esc(entry.subtitle)}</div>`) : ''}</div>`;
   const stats = statsSec ? fieldHTML(entry, statsSec, ctx) : '';
   const gal = gallerySec ? fieldHTML(entry, gallerySec, ctx) : '';
 
@@ -942,13 +1018,16 @@ export function renderEntry(entry, ctx){
     // with no image the portrait column would just be empty space stranding the content to one
     // side — collapse to a centered single column (the hero format) instead
     main = gal
-      ? `<div class="wsplit"><div class="media">${gal}</div><div class="col">${title}${stats}${body}</div></div>`
+      ? `<div class="wsplit"><div class="media">${gal}${stats}</div><div class="col">${title}${body}</div></div>`
       : `<div class="whero">${title}${stats}${body}</div>`;
   } else if (layout === 'hero'){
-    // a sheet shown as a top banner uses a feature image; sigil sheets keep emblem-beside-title
+    // sigil sheets (house/org) keep the emblem-beside-title lockup; feature sheets become a
+    // Poster Hero — the image is a wide banner with the title overlaid at the bottom.
     const head = tpl.media === 'sigil'
       ? `<div class="herohead">${gal ? `<div class="sig">${gal}</div>` : ''}${title}</div>`
-      : `${title}${gal}`;
+      : tpl.media === 'duet'
+        ? duetHeadHTML(entry, tpl, title, ctx)
+        : (gal ? `<div class="posterhero">${gal}<div class="phin">${title}</div></div>` : title);
     main = `<div class="whero">${head}${stats}${body}</div>`;
   } else {
     // rail / codex — article in the main column; the aside rail renders every non-hidden aside
@@ -1003,10 +1082,11 @@ export function renderIndex(ws, ctx){
 }
 
 /* ---- reader JS: carousels + collapsibles are native <details>; only carousels need JS ---- */
-export const READER_JS = `(function(){document.querySelectorAll('.carousel').forEach(function(c){var st=c.querySelector('.cstage');var sl=[].slice.call(st.querySelectorAll('.cslide'));if(sl.length<2)return;var cnt=c.querySelector('.ccount');var i=0;function s(){sl.forEach(function(x,k){x.className='cslide'+(k===i?' on':'');});if(cnt)cnt.textContent=(i+1)+' / '+sl.length;}var p=c.querySelector('.cprev'),n=c.querySelector('.cnext');if(p)p.onclick=function(){i=(i-1+sl.length)%sl.length;s();};if(n)n.onclick=function(){i=(i+1)%sl.length;s();};});var sh=document.querySelector('.shell');if(sh){document.querySelectorAll('[data-navtoggle]').forEach(function(b){b.onclick=function(){sh.classList.toggle('nav-open');};});}document.querySelectorAll('.rolltable').forEach(function(t){var die=+t.getAttribute('data-die')||20;var btn=t.querySelector('.rtroll');var out=t.querySelector('.rtresult');var rows=[].slice.call(t.querySelectorAll('.rtrow'));if(!btn)return;btn.onclick=function(){var r=1+Math.floor(Math.random()*die);var hit=-1;rows.forEach(function(row,idx){row.classList.remove('hit');var mn=+row.getAttribute('data-min'),mx=+row.getAttribute('data-max');if(hit<0&&!isNaN(mn)&&r>=mn&&r<=mx)hit=idx;});if(hit>=0)rows[hit].classList.add('hit');if(out)out.textContent='Rolled '+r+(hit<0?' · no match':'');};});})();`;
+export const READER_JS = `(function(){document.querySelectorAll('.relmd').forEach(function(md){var it=[].slice.call(md.querySelectorAll('.reli')),pn=[].slice.call(md.querySelectorAll('.repanel'));it.forEach(function(x,ix){x.onclick=function(){it.forEach(function(y,k){y.classList.toggle('on',k===ix);});pn.forEach(function(p,k){p.classList.toggle('on',k===ix);});};});});document.querySelectorAll('.carousel').forEach(function(c){var st=c.querySelector('.cstage');var sl=[].slice.call(st.querySelectorAll('.cslide'));if(sl.length<2)return;var cnt=c.querySelector('.ccount');var dots=[].slice.call(c.querySelectorAll('.cdots i'));var i=0;function s(){sl.forEach(function(x,k){x.className='cslide'+(k===i?' on':'');});if(cnt)cnt.textContent=(i+1)+' / '+sl.length;dots.forEach(function(d,k){d.className=(k===i?'on':'');});}var p=c.querySelector('.cprev'),n=c.querySelector('.cnext');if(p)p.onclick=function(){i=(i-1+sl.length)%sl.length;s();};if(n)n.onclick=function(){i=(i+1)%sl.length;s();};});var sh=document.querySelector('.shell');if(sh){document.querySelectorAll('[data-navtoggle]').forEach(function(b){b.onclick=function(){sh.classList.toggle('nav-open');};});}document.querySelectorAll('.rolltable').forEach(function(t){var die=+t.getAttribute('data-die')||20;var btn=t.querySelector('.rtroll');var out=t.querySelector('.rtresult');var rows=[].slice.call(t.querySelectorAll('.rtrow'));if(!btn)return;btn.onclick=function(){var r=1+Math.floor(Math.random()*die);var hit=-1;rows.forEach(function(row,idx){row.classList.remove('hit');var mn=+row.getAttribute('data-min'),mx=+row.getAttribute('data-max');if(hit<0&&!isNaN(mn)&&r>=mn&&r<=mx)hit=idx;});if(hit>=0)rows[hit].classList.add('hit');if(out)out.textContent='Rolled '+r+(hit<0?' · no match':'');};});})();`;
 
-export function docShell({ title, palette, headFont, bodyFont, headScale, bodyScale, portraitScale, fontPrefix, faceCSS, bodyHTML }){
+export function docShell({ title, palette, headFont, bodyFont, headScale, bodyScale, portraitScale, contentWidth, fontPrefix, faceCSS, bodyHTML }){
   const faces = faceCSS != null ? faceCSS : fontFaceCSS(fontPrefix || '/fonts/', [headFont, bodyFont]);
-  const head = paletteVars(palById(palette)) + fontVars(headFont, bodyFont, headScale, bodyScale, portraitScale) + '\n' + faces + '\n' + READER_CSS;
+  const cw = { focused: 0.82, normal: 1, full: 100 }[contentWidth] || 1;   // mirror store CW_FACTOR
+  const head = paletteVars(palById(palette)) + fontVars(headFont, bodyFont, headScale, bodyScale, portraitScale) + `\n:root{--cw:${cw}}\n` + faces + '\n' + READER_CSS;
   return `<!DOCTYPE html>\n<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${esc(title)}</title><style>${head}</style></head><body>${bodyHTML}<script>${READER_JS}</script></body></html>`;
 }

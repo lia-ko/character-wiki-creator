@@ -3,7 +3,7 @@
   import { pickImages } from '../../lib/images.js';
   import { imgSrc, imgPos } from '../../lib/model.js';
   import { resolveImg } from '../../lib/imagepool.js';
-  let { entry, sec, variant = 'grid', mapStyle = false, aspect = '16/10' } = $props();
+  let { entry, sec, variant = 'grid', mapStyle = false, aspect = '16/10', overlay = null } = $props();
   const imgs = $derived(entry.data[sec.key]);
 
   // carousel index for the "feature" variant
@@ -64,17 +64,13 @@
       {#if imgs.length > 1}
         <button class="nav prev" onpointerdown={(e) => e.stopPropagation()} onclick={prev} title="previous">‹</button>
         <button class="nav next" onpointerdown={(e) => e.stopPropagation()} onclick={next} title="next">›</button>
+        <span class="ccount">{cur + 1} / {imgs.length}</span>
+        <span class="cdots">{#each imgs as _, i (i)}<button type="button" class="cdot" class:on={i === cur} onpointerdown={(e) => e.stopPropagation()} onclick={() => cur = i} aria-label={`image ${i + 1}`}></button>{/each}</span>
       {/if}
       {#if imgs.length}<span class="draghint">drag to reposition</span>{/if}
       {#if !imgs.length}<button class="bigadd" onclick={add}><span>＋</span><small>add {mapStyle ? 'map & imagery' : 'image'}</small></button>{/if}
+      {#if overlay}<div class="primoverlay">{@render overlay()}</div>{/if}
     </div>
-    {#if imgs.length}
-      <div class="cnav">
-        <button class="cbtn" onclick={prev} disabled={imgs.length < 2}>‹</button>
-        <span class="ccount">{cur + 1} / {imgs.length}</span>
-        <button class="cbtn" onclick={next} disabled={imgs.length < 2}>›</button>
-      </div>
-    {/if}
     <div class="caredit">
       <button class="ce" onclick={add}>＋ Add</button>
       {#if imgs.length}
@@ -127,13 +123,19 @@
   .bigadd:hover{color:var(--ink);background:var(--line)}
   .bigadd span{font-size:2rem;font-family:var(--head)}
   .bigadd small{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase}
-  .nav{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;font-size:1.3rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:.1s}
+  .nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;font-size:1.3rem;line-height:1;display:flex;align-items:center;justify-content:center;transition:.1s}
+  /* poster-hero overlay: an editable title floats over the banner; the empty area stays draggable */
+  .primoverlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;padding:26px 30px;pointer-events:none;background:linear-gradient(180deg,transparent 42%,rgba(6,5,8,.92)),linear-gradient(90deg,rgba(6,5,8,.72) 20%,transparent 60%)}
+  .primoverlay :global(.et){pointer-events:auto}
+  /* mirrors the reader's .posterhero .phin h1 — the banner title outranks a plain page title */
+  .primoverlay :global(.et-name){color:#fff;font-size:calc(clamp(2.8rem,6.4vw,4.8rem)*var(--hs,1))}
+  .primary:has(.primoverlay) .cdots{display:none}
   .nav.prev{left:9px}.nav.next{right:9px}
   .nav:hover{background:var(--accent)}
-  .cnav{display:flex;align-items:center;justify-content:center;gap:14px}
-  .cbtn{background:none;border:1px solid var(--rule);border-radius:6px;color:var(--muted);width:34px;height:26px;cursor:pointer;font-size:1rem;line-height:1}
-  .cbtn:hover:not(:disabled){color:var(--ink);border-color:var(--accent)}.cbtn:disabled{opacity:.4;cursor:default}
-  .ccount{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;color:var(--faint)}
+  .ccount{position:absolute;top:11px;right:12px;z-index:2;pointer-events:none;font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:3px 9px}
+  .cdots{position:absolute;left:0;right:0;bottom:11px;z-index:2;display:flex;gap:5px;justify-content:center}
+  .cdot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);border:none;padding:0;cursor:pointer}
+  .cdot.on{background:#fff}
   .caredit{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
   .ce{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:var(--mono);font-size:.55rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);background:var(--panel-2);border:1px solid var(--rule);border-radius:7px;padding:6px 11px;cursor:pointer;line-height:1}
   .ce:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}

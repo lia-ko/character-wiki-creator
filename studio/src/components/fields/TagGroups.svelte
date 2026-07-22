@@ -15,6 +15,8 @@
     <div class="cat">
       <div class="chead">
         <input class="cn" bind:value={c.name} oninput={markDirty} placeholder="Category" />
+        <button class="tabx" class:on={c.tone === 'taboo'} onclick={() => { c.tone = c.tone === 'taboo' ? '' : 'taboo'; markDirty(); }}
+          title={c.tone === 'taboo' ? 'prohibitions — click to make neutral' : 'mark as prohibitions (reads red)'}>⊘</button>
         <Reorder list={cats} i={ci} />
         <button class="delx" onclick={() => delCat(ci)} title="remove">✕</button>
       </div>
@@ -38,6 +40,10 @@
   .cats{display:flex;flex-direction:column;gap:16px}
   .chead{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
   .cn{flex:1;background:none;border:none;outline:none;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  /* marks a category as the prohibition side of a pair (values vs taboos) */
+  .tabx{border:1px solid var(--rule);background:none;color:var(--faint);cursor:pointer;font-size:.72rem;line-height:1;padding:3px 7px;border-radius:6px}
+  .tabx:hover{border-color:var(--accent);color:var(--ink)}
+  .tabx.on{border-color:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
   .titem{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)}
   .tihead{display:flex;align-items:center;gap:10px}
   .tn{flex:1;background:none;border:none;outline:none;font:inherit;color:var(--ink);font-family:var(--mono);font-size:.72rem;text-transform:uppercase}

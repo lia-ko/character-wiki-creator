@@ -15,6 +15,14 @@
   const coverOf = (id) => linkedOf(id)?.cover || '';
   const ini = (id) => (nameOf(id) || '?').slice(0, 1).toUpperCase();
 
+  // two steps on purpose: `(d.clash ||= {})[k] = v` would write to the raw object the assignment
+  // returns rather than the reactive proxy, and the change would be silently lost
+  function toggleClash(k){
+    if (!d.clash) d.clash = {};
+    d.clash[k] = !d.clash[k];
+    markDirty();
+  }
+
   const ROWS = [
     { key: 'wants', label: 'Wants from them' },
     { key: 'fears', label: 'Fears' },
@@ -56,15 +64,19 @@
     <textarea rows="2" bind:value={d.tension} oninput={markDirty} placeholder="the central conflict between them — what pulls them together and what keeps them apart"></textarea>
   </div>
 
-  <!-- mirrored sides -->
-  <div class="sides">
-    {#each ['a', 'b'] as side}
-      <div class="side {side}">
-        <div class="sh">{nameOf(d[side].targetId) || (side === 'a' ? 'Person A' : 'Person B')}<span>· their side</span></div>
-        {#each ROWS as r}
-          <label class="k">{r.label}</label>
-          <input bind:value={d.sides[side][r.key]} oninput={markDirty} placeholder="…" />
-        {/each}
+  <!-- the gap: mirrored ledger, label in the spine, so asymmetry reads across (mirrors the reader) -->
+  <div class="gap spined">
+    <div class="gh a">{nameOf(d.a.targetId) || 'Person A'}</div>
+    <div class="gh mid">reads across &rarr;</div>
+    <div class="gh b">{nameOf(d.b.targetId) || 'Person B'}</div>
+    {#each ROWS as r}
+      <!-- wrapped so the label can lead its own pair when stacked; flattened it would sit between them -->
+      <div class="gaprow">
+        <input class="gc a" bind:value={d.sides.a[r.key]} oninput={markDirty} placeholder="…" />
+        <button class="gk" class:clash={d.clash?.[r.key]}
+          onclick={() => toggleClash(r.key)}
+          title={d.clash?.[r.key] ? 'marked as a clash — click to clear' : 'mark this row as a real disagreement'}>{r.label}</button>
+        <input class="gc b" bind:value={d.sides.b[r.key]} oninput={markDirty} placeholder="…" />
       </div>
     {/each}
   </div>
@@ -95,15 +107,35 @@
   .tension .tl{font-family:var(--mono);font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-soft);margin-bottom:5px}
   .tension textarea{width:100%;background:none;border:none;outline:none;color:var(--ink);font:inherit;font-size:.98rem;resize:vertical}
   .tension textarea::placeholder{color:var(--faint)}
-  .sides{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .side{border:1px solid var(--rule);border-radius:11px;background:var(--panel-2);padding:12px 14px}
-  .side.a{border-top:2px solid #c99a5a} .side.b{border-top:2px solid #5f9fb0}
-  .side .sh{font-family:var(--head);font-size:1.02rem;color:var(--ink);margin-bottom:9px}
-  .side .sh span{font-family:var(--mono);font-size:.5rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-left:6px}
-  .side .k{display:block;font-family:var(--mono);font-size:.5rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:9px 0 3px}
-  .side .k:first-of-type{margin-top:0}
-  .side input{width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:6px;outline:none;color:var(--ink);font:inherit;font-size:.92rem;padding:6px 8px}
-  .side input:focus{border-color:var(--accent)}
-  .side input::placeholder{color:var(--faint)}
-  @media(max-width:600px){.head{grid-template-columns:1fr}.who.b{flex-direction:row;text-align:left}.who.b .role{text-align:left}.sides{grid-template-columns:1fr}}
+  /* the gap — mirrors the reader ledger; --pa/--pb come from the reader token block */
+  .gap{display:grid;grid-template-columns:1fr 150px 1fr;align-items:stretch;position:relative}
+  .spined::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;z-index:0;transform:translateX(-.5px);
+    background:linear-gradient(180deg,transparent,var(--rule) 8%,var(--rule) 92%,transparent)}
+  .gaprow{display:contents}
+  .gh{font-family:var(--mono);font-size:.54rem;letter-spacing:.14em;text-transform:uppercase;padding-bottom:9px}
+  .gh.a{text-align:right;color:var(--pa,#5f9fb0)} .gh.b{color:var(--pb,#d98d82)}
+  .gh.mid{text-align:center;color:var(--faint);background:var(--bg)}
+  .gc{background:none;border:none;border-top:1px solid var(--line);outline:none;color:var(--ink);font:inherit;
+    font-size:.94rem;padding:12px 14px;min-width:0;width:100%}
+  .gc.a{text-align:right}
+  .gc::placeholder{color:var(--faint)}
+  .gc:focus{background:var(--panel-2)}
+  /* the clash tick marks rows where the two sides genuinely disagree — the rows worth reading */
+  .gk{position:relative;border:none;border-top:1px solid var(--line);background:var(--bg);cursor:pointer;
+    font-family:var(--mono);font-size:.54rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:12px 6px}
+  .gk:hover{color:var(--ink)}
+  .gk.clash{color:var(--gold,#b9924d)}
+  .gk.clash::after{content:"";position:absolute;top:5px;left:50%;width:5px;height:5px;margin-left:-2.5px;
+    border-radius:50%;background:var(--gold,#b9924d)}
+  @media(max-width:700px){
+    .head{grid-template-columns:1fr}.who.b{flex-direction:row;text-align:left}.who.b .role{text-align:left}
+    .spined::before{display:none}
+    .gap{grid-template-columns:1fr}
+    .gh.a,.gh.b{display:none}.gh.mid{display:none}
+    .gaprow{display:flex;flex-direction:column;margin-bottom:10px}
+    .gk{order:-1;text-align:left;padding:12px 0 4px;border-top:1px solid var(--rule)}
+    .gk.clash::after{display:none}
+    .gc{border-top:none;text-align:left!important;border-left:2px solid var(--rule);padding:6px 0 6px 12px;margin-bottom:4px}
+    .gc.a{border-color:var(--pa,#5f9fb0)} .gc.b{border-color:var(--pb,#d98d82)}
+  }
 </style>

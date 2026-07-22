@@ -170,13 +170,16 @@ export const TEMPLATES = {
      status, the central tension, and the MIRRORED his/her columns (asymmetry is the point).
      Key moments reuse the History timeline (★ = the black moment / turning point). ---- */
   relationship: {
-    type: 'relationship', label: 'Relationship', plural: 'Relationships', icon: '↔', layout: 'hero', media: 'none',
+    /* `duet` hero: the only sheet whose subject is two people — the header is built from the two
+       linked characters' own covers, so it needs no gallery of its own. */
+    type: 'relationship', label: 'Relationship', plural: 'Relationships', icon: '↔', layout: 'hero', media: 'duet',
     title: { ph: 'The pairing (e.g. Cael & Bren)' }, subtitle: { ph: 'dynamic (optional)' },
     sections: [
       { key: 'summary', label: 'The pitch', type: 'richline', slot: 'main', lead: true },
       { key: 'dyad', label: 'The pairing', type: 'dyad', slot: 'main' },
       { key: 'trajectory', label: 'Trajectory', type: 'arc', mode: 'relationship', slot: 'main', optional: true },
-      { key: 'beats', label: 'Key moments', type: 'history', slot: 'main' },
+      /* `sided` beats alternate across the spine by whose move each was (a / b / both) */
+      { key: 'beats', label: 'Key moments', type: 'history', slot: 'main', sided: true },
       { key: 'notes', label: 'Notes', type: 'richsections', slot: 'main', optional: true },
       { key: 'excerpts', label: 'Passages', type: 'excerpts', slot: 'main', optional: true },
     ],
@@ -353,9 +356,15 @@ export const TEMPLATES = {
       { key: 'summary', label: 'Summary', type: 'richline', slot: 'main', lead: true },
       { key: 'gallery', label: 'Imagery', type: 'gallery', slot: 'aside' },
       { key: 'stats', label: 'Details', type: 'stats', slot: 'aside', defaults: ['Region','People','Related faith','Prevalence','Status'] },
-      { key: 'scale', label: 'How strictly kept', type: 'meter', slot: 'main', levels: ['Loose','Held','Strict','Absolute'] },
       { key: 'overview', label: 'Overview', type: 'richsections', slot: 'main' },
-      { key: 'catalog', label: 'Customs & beliefs', type: 'catalog', slot: 'main', scale: 'Observance' },
+      // Beliefs = what's held true (rated by Conviction); Customs = what's done (rated by Observance).
+      // The old sheet-wide "How strictly kept" meter was dropped — strictness lives per-item on the badges below.
+      { key: 'tenets', label: 'Beliefs', type: 'catalog', slot: 'main', scale: 'Conviction', ramp: 'gold',
+        def: 'What is held to be true — rated by how firmly it is held, from a fringe notion to sacred certainty.',
+        whyLabel: 'Why they hold it' },
+      { key: 'catalog', label: 'Customs & rites', type: 'catalog', slot: 'main', scale: 'Observance', ramp: 'accent',
+        def: 'What is done, and when — rated by how strictly it is kept, and what breaking it costs.',
+        costLabel: 'Break it and…' },
       { key: 'values', label: 'Values & taboos', type: 'taggroups', slot: 'main', optional: true },
       { key: 'excerpts', label: 'Sayings', type: 'excerpts', slot: 'main', optional: true },
     ],

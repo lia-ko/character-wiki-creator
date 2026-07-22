@@ -47,7 +47,16 @@ export const PALETTES = [
 ];
 
 export function palById(id){ return PALETTES.find(p => p.id === id) || PALETTES[1]; }
-export function paletteVars(p){ return ":root{--bg:"+p.bg+";--panel:"+p.panel+";--panel-2:"+p.panel2+";--ink:"+p.ink+";--muted:"+p.muted+";--faint:"+p.faint+";--accent:"+p.accent+";--accent-soft:"+p.accentSoft+";--rule:"+p.rule+";--line:"+p.line+"}"; }
+// `--gold` is a second, accent-independent ramp colour (scale badges, pull-quote rules). It is not
+// per-palette data: a single warm gold reads on dark grounds but fails contrast on the light
+// palettes, so pick the light/dark variant from the palette's own background luminance.
+function isLightBg(hex){
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim()); if (!m) return false;
+  const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.5;
+}
+export function goldFor(p){ return p && p.gold ? p.gold : (isLightBg(p && p.bg) ? "#8a6a2f" : "#b9924d"); }
+export function paletteVars(p){ return ":root{--bg:"+p.bg+";--panel:"+p.panel+";--panel-2:"+p.panel2+";--ink:"+p.ink+";--muted:"+p.muted+";--faint:"+p.faint+";--accent:"+p.accent+";--accent-soft:"+p.accentSoft+";--rule:"+p.rule+";--line:"+p.line+";--gold:"+goldFor(p)+"}"; }
 
 export const FACES = [
   {id:"abril-fatface",name:"Abril Fatface",family:"Abril Fatface",cat:"serif",dir:"Abril_Fatface",file:"AbrilFatface-Regular.ttf",ital:"",varr:false},

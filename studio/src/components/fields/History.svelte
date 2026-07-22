@@ -1,9 +1,17 @@
 <script>
   import { markDirty, confirmDelete } from '../../lib/store.svelte.js';
+  import { templateFor } from '../../lib/templates.js';
   import RichEditor from './RichEditor.svelte';
   import Reorder from '../Reorder.svelte';
-  let { entry, sec } = $props();
+  let { entry, sec, others } = $props();
   const list = $derived(entry.data[sec.key]);
+  // `sided` sections (a relationship's key moments) record whose move each beat was, so the
+  // reader can lay them out either side of the spine. Labels come from the sheet's own dyad.
+  const dyadSec = $derived(sec.sided ? (templateFor(entry.type).sections || []).find(s => s.type === 'dyad') : null);
+  const dyad = $derived(dyadSec ? (entry.data[dyadSec.key] || {}) : {});
+  const nameOf = (id) => (others || []).find(o => o.id === id)?.title || '';
+  const sideName = (s) => s === 'a' ? (nameOf(dyad.a?.targetId) || 'A') : (nameOf(dyad.b?.targetId) || 'B');
+  function setSide(i, s){ list[i].side = list[i].side === s ? 'both' : s; markDirty(); }
 
   function add(){ list.push({ date: '', title: '', body: '', key: false }); markDirty(); }
   async function del(i){
@@ -21,6 +29,12 @@
       <div class="htop">
         <input class="hdate" bind:value={r.date} oninput={markDirty} placeholder="era / date" />
         <input class="htitle" bind:value={r.title} oninput={markDirty} placeholder="what happened" />
+        {#if sec.sided}
+          <span class="hside">
+            <button class:on={r.side === 'a'} onclick={() => setSide(i, 'a')} title="{sideName('a')}’s move">{sideName('a').slice(0, 1)}</button>
+            <button class:on={r.side === 'b'} onclick={() => setSide(i, 'b')} title="{sideName('b')}’s move">{sideName('b').slice(0, 1)}</button>
+          </span>
+        {/if}
         <button class="hk" class:on={r.key} onclick={() => toggleKey(i)} title="mark as a key beat" aria-label="key beat">★</button>
         <Reorder {list} {i} />
         <button class="hdel" onclick={() => del(i)} title="remove" aria-label="remove event">✕</button>
@@ -39,7 +53,13 @@
   .hev::before{content:"";position:absolute;left:-22px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--rule)}
   .hev.key::before{background:var(--accent);border-color:var(--accent)}
   .hev.key{border-color:color-mix(in srgb,var(--accent) 30%,var(--rule))}
-  .htop{display:grid;grid-template-columns:minmax(6em,auto) minmax(0,1fr) auto auto auto;gap:8px;align-items:center}
+  .htop{display:grid;grid-template-columns:minmax(6em,auto) minmax(0,1fr) auto auto auto auto;gap:8px;align-items:center}
+  /* whose move: neither selected = a shared beat, centred on the spine in the reader */
+  .hside{display:inline-flex;gap:3px}
+  .hside button{border:1px solid var(--rule);background:var(--panel-2);color:var(--faint);border-radius:6px;
+    cursor:pointer;padding:4px 8px;font-family:var(--mono);font-size:.6rem;line-height:1}
+  .hside button:first-child.on{color:var(--pa,#5f9fb0);border-color:color-mix(in srgb,var(--pa,#5f9fb0) 55%,transparent)}
+  .hside button:last-child.on{color:var(--pb,#d98d82);border-color:color-mix(in srgb,var(--pb,#d98d82) 55%,transparent)}
   .hdate{background:var(--panel-2);border:1px solid var(--rule);border-radius:6px;outline:none;font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-soft);padding:4px 8px;field-sizing:content;min-width:6em;max-width:16em}
   .htitle{background:none;border:none;outline:none;font-family:var(--head);font-size:calc(1.1rem*var(--hs,1));color:var(--ink);min-width:0}
   .hdate::placeholder,.htitle::placeholder{color:var(--faint)}

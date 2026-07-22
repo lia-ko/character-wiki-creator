@@ -1,6 +1,6 @@
 <script>
-  import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow, toast, undo, confirmModal } from '../lib/store.svelte.js';
-  import { coverOf, entriesByType } from '../lib/model.js';
+  import { app, curProject, openEntry, addEntry, deleteEntry, markDirty, saveNow, toast, undo, confirmModal, promoteEntry, demoteEntry, toggleBibleBook } from '../lib/store.svelte.js';
+  import { coverOf, entriesByType, seriesOf, bibleForBook, booksInSeries } from '../lib/model.js';
   import { resolveImg } from '../lib/imagepool.js';
   import { ENTRY_TYPES, FAMILIES, templateFor } from '../lib/templates.js';
   import ThemeBar from './ThemeBar.svelte';
@@ -41,6 +41,14 @@
 
   const p = $derived(curProject());
   const groups = $derived(entriesByType(p));
+
+  // series bible (shared sheets used in this book) — only when the project is part of a series
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+  const series = $derived(seriesOf(app.ws, p));
+  const seriesBooks = $derived(series ? booksInSeries(app.ws, series.id) : []);
+  const bible = $derived(series ? bibleForBook(series, p.id) : []);
+  function promote(ev, id){ ev.stopPropagation(); promoteEntry(id); toast('Added to the series bible'); }
+  function demote(ev, id){ ev.stopPropagation(); demoteEntry(id); toast('Kept local in this book'); }
 
   // card size (per-project preference): smaller cards = more per row = less scrolling
   const SIZES = { sm: 132, md: 182, lg: 250 };
@@ -114,6 +122,46 @@
 
   <FontSample />
 
+  {#if series}
+    <section class="typesec biblesec">
+      <div class="typehead">
+        <h2><span class="ic">✦</span> Series bible <span class="tcount">{bible.length}</span></h2>
+        <span class="biblenote">shared across the series · edits apply to every book</span>
+      </div>
+      {#if bible.length}
+        <div class="grid">
+          {#each bible as e (e.id)}
+            {@const cover = coverOf(e)}
+            <div class="card bible" role="button" tabindex="0" aria-label={e.title || 'Untitled'}
+                 onclick={() => openEntry(e.id)}
+                 onkeydown={(ev) => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); openEntry(e.id); } }}>
+              <div class="cardctl">
+                <button class="kebab" onclick={(ev) => demote(ev, e.id)} title="Keep local in this book (remove from bible)">⤓</button>
+              </div>
+              <span class="bibletag" title="in the series bible">✦</span>
+              <div class="portrait" style={cover ? `background-image:url(${cover})` : ''}>
+                {#if !cover}<span class="ini">{(e.title || '?').slice(0, 2)}</span>{/if}
+              </div>
+              <div class="meta">
+                <div class="nm">{e.title || 'Untitled'}</div>
+                {#if seriesBooks.length > 1}
+                  <div class="usedin" title="used in these books">
+                    {#each seriesBooks as b, i (b.id)}
+                      <button class="upill" class:on={(e.books || []).includes(b.id)} title={b.name || 'Book'}
+                              onclick={(ev) => { ev.stopPropagation(); toggleBibleBook(e, b.id); }}>{ROMAN[i + 1] || i + 1}</button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="bibleempty">Nothing shared yet. Open a local entry and hit <b>◇</b> on its card to add it to the bible so it can appear in every book.</div>
+      {/if}
+    </section>
+  {/if}
+
   {#if p.spotify}
     <details class="psound">
       <summary><span class="ic">♪</span> Soundtrack {#if p.spotify.length}<span class="tcount">{p.spotify.length}</span>{/if}</summary>
@@ -178,6 +226,7 @@
                   <span class="selck" class:on={selected[e.id]}>{selected[e.id] ? '✓' : ''}</span>
                 {:else}
                   <div class="cardctl">
+                    {#if p.seriesId}<button class="kebab prom" onclick={(ev) => promote(ev, e.id)} title="Add to series bible">◇</button>{/if}
                     <Reorder horizontal onmove={(d) => moveEntry(e, d)} first={ei === 0} last={ei === cl.items.length - 1} />
                     <button class="kebab" onclick={(ev) => del(ev, e.id)} title="delete">✕</button>
                   </div>
@@ -292,6 +341,17 @@
   .card:hover .cardctl{opacity:1}
   .kebab{width:24px;height:24px;border-radius:7px;border:none;background:rgba(0,0,0,.5);color:#fff;cursor:pointer;font-size:.9rem;line-height:1}
   .kebab:hover{background:var(--accent)}
+  .biblesec{margin-top:24px}
+  .biblesec .typehead{border-bottom-color:color-mix(in srgb,var(--accent-soft) 40%,var(--rule))}
+  .biblenote{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .card.bible{border-color:color-mix(in srgb,var(--accent-soft) 45%,var(--rule))}
+  .bibletag{position:absolute;top:9px;left:9px;z-index:3;width:22px;height:22px;border-radius:6px;background:rgba(0,0,0,.5);border:1px solid var(--accent-soft);color:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:.7rem}
+  .usedin{display:flex;gap:4px;margin-top:6px}
+  .upill{font:inherit;font-family:var(--mono);font-size:.5rem;letter-spacing:.06em;min-width:18px;height:16px;padding:0 4px;border-radius:4px;border:1px solid rgba(255,255,255,.32);background:rgba(0,0,0,.4);color:#fff;cursor:pointer;line-height:1}
+  .upill.on{background:var(--accent-soft);border-color:var(--accent-soft);color:#1a1017;font-weight:700}
+  .kebab.prom:hover{background:var(--accent-soft);color:#1a1017}
+  .bibleempty{color:var(--faint);font-style:italic;font-size:.88rem;padding:8px 2px}
+  .bibleempty b{color:var(--accent-soft);font-style:normal}
   .emptyall{color:var(--faint);font-style:italic;font-size:.9rem;text-align:center;padding:48px 20px}
   .emptyall b{color:var(--muted);font-style:normal}
   .estart{max-width:520px;margin:40px auto;text-align:center;border:1px solid var(--rule);border-radius:16px;background:var(--panel);padding:36px 28px}

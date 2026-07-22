@@ -1,5 +1,5 @@
 /* ============ REACTIVE APP STATE (Svelte 5 runes) ============ */
-import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySectionsOf, newCustomType, duplicateType, importTypeToProject, typeId, slugify } from './model.js';
+import { createWorkspace, createProject, createEntry, migrateWorkspace, bodySectionsOf, newCustomType, duplicateType, importTypeToProject, typeId, slugify, createSeries, setBookSeries, booksInSeries, bibleForBook, seriesOf, promoteToBible, demoteToLocal } from './model.js';
 import { emptyValue, rebuildCustomTypes, isCustomType, customTypeById, ENTRY_TYPES } from './templates.js';
 import { sectionFromFeature } from './features.js';
 import { idbSet, idbGet } from './persist.js';
@@ -56,8 +56,13 @@ export function curProject(){
 export function curEntry(){
   const p = curProject();
   if (!p) return null;
-  return p.entries.find(e => e.id === app.entryId) || null;
+  const local = p.entries.find(e => e.id === app.entryId);
+  if (local) return local;
+  const s = seriesOf(app.ws, p);   // the entry may be a shared bible sheet of this book's series
+  return s ? (s.entries || []).find(e => e.id === app.entryId) || null : null;
 }
+// is the current open entry a shared bible sheet (vs a book-local entry)?
+export function isBibleEntry(id){ const s = seriesOf(app.ws, curProject()); return !!(s && (s.entries || []).some(e => e.id === id)); }
 /* ---- local autosave (IndexedDB) so a refresh never loses work ---- */
 let saveTimer = null, restored = false;
 // The workspace snapshot is a deep clone; run it when the main thread is idle so it never
@@ -112,7 +117,7 @@ function restoreSnapshot(snap){
 function reconcileSelection(){
   if (!app.ws.projects.find(p => p.id === app.projectId)) app.projectId = app.ws.projects[0]?.id || null;
   const p = curProject();
-  if (app.view === 'entry' && (!p || !p.entries.find(e => e.id === app.entryId))){ app.view = 'project'; app.entryId = null; }
+  if (app.view === 'entry' && !curEntry()){ app.view = 'project'; app.entryId = null; }
   if (app.view === 'builder' && !(app.ws.typeLibrary || []).some(t => t.type === app.builderTypeId)){ app.view = 'project'; }
 }
 export function undo(){ if (histTimer) commitHistory(); if (hIndex <= 0) return; hIndex--; restoreSnapshot(history[hIndex]); syncHist(); }
@@ -234,10 +239,11 @@ export function setContentWidth(w){ app.ws.contentWidth = w; markDirty(); }
 export function orderedEntries(p){
   if (!p) return [];
   const order = [...ENTRY_TYPES, ...(p.types || []).map(t => t.type)];
-  const byType = {}; (p.entries || []).forEach(e => (byType[e.type] || (byType[e.type] = [])).push(e));
+  const src = [...(p.entries || []), ...bibleForBook(seriesOf(app.ws, p), p.id)];   // local + shared bible
+  const byType = {}; src.forEach(e => (byType[e.type] || (byType[e.type] = [])).push(e));
   const out = [], seen = new Set();
   for (const t of order) (byType[t] || []).forEach(e => { out.push(e); seen.add(e.id); });
-  (p.entries || []).forEach(e => { if (!seen.has(e.id)) out.push(e); });   // any stragglers
+  src.forEach(e => { if (!seen.has(e.id)) out.push(e); });   // any stragglers
   return out;
 }
 // rename a group: retarget every entry of `type` whose group === oldName to newName ('' = ungrouped)
@@ -256,19 +262,29 @@ export function stepEntry(dir){
   if (i < 0 || j < 0 || j >= list.length) return; openEntry(list[j].id);
 }
 export function openProjects(){ app.view = 'projects'; }
-export function openProject(id){ app.projectId = id; app.view = 'project'; }
+export function openProject(id){ app.projectId = id; app.ws.lastProjectId = id; app.view = 'project'; saveNow(); }
 // on a phone the entry nav overlays the sheet (it can't shift the content) — close it when a
 // selection is made so the opened sheet is actually visible; on wider screens it stays put beside the sheet
 const navIsOverlay = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width:900px)').matches;
 export function openEntry(id){ app.entryId = id; app.view = 'entry'; app.mode = 'edit'; if (navIsOverlay()) app.navOpen = false; }
-export function openAnyEntry(id){ for (const p of app.ws.projects){ if (p.entries.some(e => e.id === id)){ app.projectId = p.id; app.entryId = id; app.view = 'entry'; app.mode = 'edit'; if (navIsOverlay()) app.navOpen = false; return; } } }
+export function openAnyEntry(id){
+  for (const p of app.ws.projects){ if (p.entries.some(e => e.id === id)){ app.projectId = p.id; app.entryId = id; app.view = 'entry'; app.mode = 'edit'; if (navIsOverlay()) app.navOpen = false; return; } }
+  // shared bible sheet: open it in the context of a book it's used in (prefer the current one)
+  for (const s of (app.ws.series || [])){
+    const e = (s.entries || []).find(x => x.id === id); if (!e) continue;
+    const book = app.ws.projects.find(p => p.seriesId === s.id && (e.books || []).includes(p.id)) || app.ws.projects.find(p => p.seriesId === s.id);
+    if (book) app.projectId = book.id;
+    app.entryId = id; app.view = 'entry'; app.mode = 'edit'; if (navIsOverlay()) app.navOpen = false; return;
+  }
+}
 export function toggleMode(){ app.mode = app.mode === 'edit' ? 'preview' : 'edit'; }
 
 /* ---- mutations ---- */
-export function addProject(){
+export function addProject(seriesId){
   const p = createProject('New project', '');
   p.entries.push(createEntry('character', 'New character'));
   app.ws.projects.push(p);
+  if (seriesId){ p.name = 'New book'; setBookSeries(app.ws, p.id, seriesId); }
   markDirty();
   openProject(p.id);
 }
@@ -280,6 +296,25 @@ export function deleteProject(id){
   else if (app.projectId === id){ app.projectId = app.ws.projects[0].id; }
   markDirty();
 }
+
+/* ---- series (grouping books; the shared bible is edited in the series hub, Phase 3) ---- */
+export function addSeries(name){ const s = createSeries(name || 'New series', ''); app.ws.series.push(s); markDirty(); return s; }
+export function moveProjectToSeries(projectId, seriesId){ setBookSeries(app.ws, projectId, seriesId || ''); markDirty(); }
+export function deleteSeries(id){
+  const s = (app.ws.series || []).find(x => x.id === id); if (!s) return;
+  // demote any bible sheets back to the first book so they aren't lost, then reparent books to standalone
+  const first = app.ws.projects.find(p => p.seriesId === id);
+  (s.entries || []).slice().forEach(e => { delete e.books; if (first) first.entries.push(e); });
+  app.ws.projects.forEach(p => { if (p.seriesId === id) p.seriesId = ''; });
+  app.ws.series = app.ws.series.filter(x => x.id !== id);
+  markDirty();
+}
+// move the current book's local entry up into the shared series bible (used in all books by default)
+export function promoteEntry(entryId){ const p = curProject(); if (!p || !p.seriesId) return; promoteToBible(app.ws, p.id, entryId); markDirty(); }
+// move a shared bible sheet back down into the current book as a local entry
+export function demoteEntry(entryId){ const p = curProject(); if (!p || !p.seriesId) return; demoteToLocal(app.ws, p.seriesId, entryId, p.id); markDirty(); }
+// toggle whether a bible sheet appears in a given book
+export function toggleBibleBook(entry, bookId){ if (!entry) return; const b = entry.books || (entry.books = []); const i = b.indexOf(bookId); if (i === -1) b.push(bookId); else b.splice(i, 1); markDirty(); }
 export function addEntry(type){
   const p = curProject(); if (!p) return;
   // if it's a library type not yet in this project, import a self-contained copy first
